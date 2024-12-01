@@ -2,13 +2,13 @@ name: Lint
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint:
-    name: Run ESLint
+    name: Run ESLint and Prettier
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,3 +42,6 @@ jobs:
 
       - name: Run ESLint
         run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
