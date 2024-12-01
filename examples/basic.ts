@@ -1,4 +1,4 @@
-import { mdfind, MdfindError } from '../src'
+import { mdfind, MdfindError } from '../src/mdfind.js'
 
 async function main() {
   try {

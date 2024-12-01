@@ -1,4 +1,4 @@
-import { mdfind } from '../src'
+import { mdfind } from '../src/mdfind.js'
 import { homedir } from 'os'
 import { join } from 'path'
 
