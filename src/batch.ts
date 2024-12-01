@@ -2,7 +2,7 @@ import { mdfind } from './mdfind.js'
 import { SpotlightAttributeSchema, type MdfindOptions } from './schemas/index.js'
 import { z } from 'zod'
 
-export interface BatchSearchOptions extends Omit<MdfindOptions, 'live' | 'reprint'> {
+export interface BatchSearchOptions extends Omit<MdfindOptions, 'live'> {
   query: string
 }
 
@@ -19,7 +19,15 @@ export const BatchSearchOptionsSchema = z
     literal: z.boolean().optional(),
     interpret: z.boolean().optional()
   })
-  .passthrough()
+  .strict()
+  .transform(opts => ({
+    count: false,
+    nullSeparator: false,
+    maxBuffer: 1024 * 512,
+    literal: false,
+    interpret: false,
+    ...opts
+  }))
 
 export interface BatchSearchResult {
   query: string

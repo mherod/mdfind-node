@@ -17,6 +17,16 @@ export const MdfindOptionsSchema = z
     interpret: z.boolean().optional()
   })
   .strict()
+  .transform(opts => ({
+    live: false,
+    count: false,
+    nullSeparator: false,
+    maxBuffer: 1024 * 512,
+    reprint: false,
+    literal: false,
+    interpret: false,
+    ...opts
+  }))
 
 export const MdlsOptionsSchema = z
   .object({
@@ -25,13 +35,23 @@ export const MdlsOptionsSchema = z
     nullMarker: z.string().optional()
   })
   .strict()
+  .transform(opts => ({
+    attributes: [],
+    raw: false,
+    nullMarker: '(null)',
+    ...opts
+  }))
 
 export const MdutilOptionsSchema = z
   .object({
     verbose: z.boolean().optional()
   })
   .strict()
+  .transform(opts => ({
+    verbose: false,
+    ...opts
+  }))
 
-export type MdfindOptions = z.infer<typeof MdfindOptionsSchema>
-export type MdlsOptions = z.infer<typeof MdlsOptionsSchema>
-export type MdutilOptions = z.infer<typeof MdutilOptionsSchema>
+export type MdfindOptions = z.input<typeof MdfindOptionsSchema>
+export type MdlsOptions = z.input<typeof MdlsOptionsSchema>
+export type MdutilOptions = z.input<typeof MdutilOptionsSchema>

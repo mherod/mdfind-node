@@ -61,10 +61,29 @@ export const SpotlightAttributeSchema = z
   ])
   .or(z.string())
 
-export const MetadataResultSchema = z.record(
-  z.string(),
-  z.union([z.string(), z.number(), z.date(), z.boolean(), z.array(z.string()), z.null()])
-)
+export const MetadataResultSchema = z
+  .record(
+    z.string(),
+    z.union([
+      z.string(),
+      z.coerce.number(),
+      z.coerce.date(),
+      z.boolean(),
+      z.array(z.string()),
+      z.null()
+    ])
+  )
+  .transform(obj => {
+    // Clean up any failed coercions
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => {
+        if (value instanceof Date && isNaN(value.getTime())) {
+          return [key, null]
+        }
+        return [key, value]
+      })
+    )
+  })
 
 export type SpotlightContentType = z.infer<typeof SpotlightContentTypeSchema>
 export type SpotlightAttribute = z.infer<typeof SpotlightAttributeSchema>

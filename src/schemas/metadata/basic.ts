@@ -1,14 +1,15 @@
 import { z } from 'zod'
+import { homedir } from 'os'
 
 // Basic file metadata schema
 export const BasicMetadataSchema = z
   .object({
-    path: z.string(),
+    path: z.string().transform(p => p.replace(/^~/, homedir())),
     name: z.string(),
-    size: z.number().optional(),
-    created: z.date().optional(),
-    modified: z.date().optional(),
-    lastOpened: z.date().optional(),
+    size: z.coerce.number().catch(0).optional(),
+    created: z.coerce.date().nullable().optional(),
+    modified: z.coerce.date().nullable().optional(),
+    lastOpened: z.coerce.date().nullable().optional(),
     contentType: z.string().optional(),
     kind: z.string().optional()
   })
