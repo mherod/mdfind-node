@@ -12,7 +12,9 @@ async function main() {
       const metadata = await getMetadata(filePath)
       console.log('Metadata:', JSON.stringify(metadata, null, 2))
     } catch (error) {
-      console.log('No example.pdf found in Downloads')
+      if (error instanceof Error) {
+        console.log('No example.pdf found in Downloads:', error.message)
+      }
     }
 
     // Get specific attributes
@@ -23,7 +25,9 @@ async function main() {
       })
       console.log('Specific attributes:', attributes)
     } catch (error) {
-      console.log('No example.pdf found in Downloads')
+      if (error instanceof Error) {
+        console.log('No example.pdf found in Downloads:', error.message)
+      }
     }
 
     // Get raw output
@@ -35,7 +39,9 @@ async function main() {
       })
       console.log('Raw data:', rawData)
     } catch (error) {
-      console.log('No example.pdf found in Downloads')
+      if (error instanceof Error) {
+        console.log('No example.pdf found in Downloads:', error.message)
+      }
     }
 
     // Check indexing status
@@ -49,7 +55,9 @@ async function main() {
         console.log('- Reasoning:', homeStatus.reasoning)
       }
     } catch (error) {
-      console.error('Failed to get indexing status:', error.message)
+      if (error instanceof Error) {
+        console.error('Failed to get indexing status:', error.message)
+      }
     }
 
     // List index contents
@@ -60,14 +68,15 @@ async function main() {
     } catch (error) {
       if (error instanceof MdutilError && error.requiresRoot) {
         console.log('Note: This operation requires root privileges')
-      } else {
+      } else if (error instanceof Error) {
         console.error('Failed to list index contents:', error.message)
       }
     }
-
   } catch (error) {
-    console.error('Error:', error)
-    process.exit(1)
+    if (error instanceof Error) {
+      console.error('Error:', error.message)
+      process.exit(1)
+    }
   }
 }
 
