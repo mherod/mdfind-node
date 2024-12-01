@@ -90,8 +90,15 @@ const XMP_ATTRIBUTE_MAP = {
   kMDItemFinderComment: 'description',
   kMDItemContentCreationDate: 'createDate',
   kMDItemContentModificationDate: 'modifyDate',
-  kMDItemCopyright: 'copyrightNotice'
-} as const
+  kMDItemCopyright: 'copyrightNotice',
+  kMDItemLabel: 'label',
+  kMDItemRights: 'rights',
+  kMDItemColorSpace: 'colorMode',
+  kMDItemICCProfile: 'iccProfile',
+  kMDItemWebStatement: 'webStatement',
+  kMDItemMetadataModificationDate: 'metadataDate',
+  kMDItemMarked: 'marked'
+} as const satisfies Record<string, keyof XMPData>
 
 /**
  * Get extended metadata for a file
@@ -140,7 +147,51 @@ export const getExtendedMetadata = async (
     for (const [spotlightAttr, exifAttr] of Object.entries(EXIF_ATTRIBUTE_MAP)) {
       const value = spotlightData[spotlightAttr]
       if (value !== undefined && value !== null) {
-        exifData[exifAttr as keyof ExifData] = value
+        // Type-safe property assignment
+        if (['make', 'model', 'software', 'lens'].includes(exifAttr) && typeof value === 'string') {
+          exifData[exifAttr as keyof Pick<ExifData, 'make' | 'model' | 'software' | 'lens'>] = value
+        } else if (
+          ['dateTime', 'dateTimeOriginal', 'dateTimeDigitized'].includes(exifAttr) &&
+          value instanceof Date
+        ) {
+          exifData[
+            exifAttr as keyof Pick<ExifData, 'dateTime' | 'dateTimeOriginal' | 'dateTimeDigitized'>
+          ] = value
+        } else if (
+          [
+            'exposureTime',
+            'fNumber',
+            'isoSpeedRatings',
+            'focalLength',
+            'focalLengthIn35mmFilm',
+            'flash',
+            'meteringMode',
+            'exposureProgram',
+            'whiteBalance',
+            'gpsLatitude',
+            'gpsLongitude',
+            'gpsAltitude'
+          ].includes(exifAttr) &&
+          typeof value === 'number'
+        ) {
+          exifData[
+            exifAttr as keyof Pick<
+              ExifData,
+              | 'exposureTime'
+              | 'fNumber'
+              | 'isoSpeedRatings'
+              | 'focalLength'
+              | 'focalLengthIn35mmFilm'
+              | 'flash'
+              | 'meteringMode'
+              | 'exposureProgram'
+              | 'whiteBalance'
+              | 'gpsLatitude'
+              | 'gpsLongitude'
+              | 'gpsAltitude'
+            >
+          ] = value
+        }
       }
     }
     result.exif = ExifDataSchema.parse(exifData)
@@ -152,7 +203,48 @@ export const getExtendedMetadata = async (
     for (const [spotlightAttr, xmpAttr] of Object.entries(XMP_ATTRIBUTE_MAP)) {
       const value = spotlightData[spotlightAttr]
       if (value !== undefined && value !== null) {
-        xmpData[xmpAttr as keyof XMPData] = value
+        // Type-safe property assignment
+        if (
+          [
+            'creator',
+            'title',
+            'description',
+            'label',
+            'rights',
+            'copyrightNotice',
+            'colorMode',
+            'iccProfile',
+            'webStatement'
+          ].includes(xmpAttr) &&
+          typeof value === 'string'
+        ) {
+          xmpData[
+            xmpAttr as keyof Pick<
+              XMPData,
+              | 'creator'
+              | 'title'
+              | 'description'
+              | 'label'
+              | 'rights'
+              | 'copyrightNotice'
+              | 'colorMode'
+              | 'iccProfile'
+              | 'webStatement'
+            >
+          ] = value
+        } else if (xmpAttr === 'subject' && Array.isArray(value)) {
+          xmpData.subject = value.filter((v): v is string => typeof v === 'string')
+        } else if (xmpAttr === 'rating' && typeof value === 'number') {
+          xmpData.rating = value
+        } else if (
+          ['createDate', 'modifyDate', 'metadataDate'].includes(xmpAttr) &&
+          value instanceof Date
+        ) {
+          xmpData[xmpAttr as keyof Pick<XMPData, 'createDate' | 'modifyDate' | 'metadataDate'>] =
+            value
+        } else if (xmpAttr === 'marked' && typeof value === 'boolean') {
+          xmpData.marked = value
+        }
       }
     }
     result.xmp = XMPDataSchema.parse(xmpData)

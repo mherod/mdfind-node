@@ -78,8 +78,6 @@ export const MdfindOptionsSchema = z
   })
   .strict()
 
-export type MdfindOptions = z.infer<typeof MdfindOptionsSchema>
-
 export const MdlsOptionsSchema = z
   .object({
     attributes: z.array(SpotlightAttributeSchema).optional(),
@@ -135,3 +133,63 @@ export type MdutilOptions = z.infer<typeof MdutilOptionsSchema>
 export type IndexStatus = z.infer<typeof IndexStatusSchema>
 export type MetadataResult = z.infer<typeof MetadataResultSchema>
 export type LiveSearchEvents = z.infer<typeof LiveSearchEventsSchema>
+
+// Extended metadata schemas
+export const ExifDataSchema = z
+  .object({
+    make: z.string().optional(),
+    model: z.string().optional(),
+    software: z.string().optional(),
+    lens: z.string().optional(),
+    dateTime: z.date().optional(),
+    dateTimeOriginal: z.date().optional(),
+    dateTimeDigitized: z.date().optional(),
+    exposureTime: z.number().optional(),
+    fNumber: z.number().optional(),
+    isoSpeedRatings: z.number().optional(),
+    focalLength: z.number().optional(),
+    focalLengthIn35mmFilm: z.number().optional(),
+    flash: z.number().optional(),
+    meteringMode: z.number().optional(),
+    exposureProgram: z.number().optional(),
+    whiteBalance: z.number().optional(),
+    gpsLatitude: z.number().optional(),
+    gpsLongitude: z.number().optional(),
+    gpsAltitude: z.number().optional()
+  })
+  .strict()
+
+export const XMPDataSchema = z
+  .object({
+    creator: z.string().optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    subject: z.array(z.string()).optional(),
+    rating: z.number().optional(),
+    label: z.string().optional(),
+    rights: z.string().optional(),
+    copyrightNotice: z.string().optional(),
+    colorMode: z.string().optional(),
+    iccProfile: z.string().optional(),
+    webStatement: z.string().optional(),
+    createDate: z.date().optional(),
+    modifyDate: z.date().optional(),
+    metadataDate: z.date().optional(),
+    marked: z.boolean().optional()
+  })
+  .strict()
+
+export const ExtendedMetadataSchema = z
+  .object({
+    basic: z.record(z.string(), z.unknown()),
+    exif: ExifDataSchema,
+    xmp: XMPDataSchema,
+    spotlight: MetadataResultSchema
+  })
+  .strict()
+
+export type ExifData = z.infer<typeof ExifDataSchema>
+export type XMPData = z.infer<typeof XMPDataSchema>
+export type ExtendedMetadata = z.infer<typeof ExtendedMetadataSchema>
+
+export type MdfindOptions = z.infer<typeof MdfindOptionsSchema>
