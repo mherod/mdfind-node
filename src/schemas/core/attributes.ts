@@ -1,5 +1,32 @@
 import { z } from 'zod'
 
+/**
+ * Interface for Spotlight attribute definitions.
+ * Describes metadata attributes available in Spotlight searches.
+ *
+ * Properties:
+ * - name: Attribute identifier (e.g., 'kMDItemDisplayName')
+ * - description: Human-readable description
+ * - type: Data type of the attribute value
+ * - example: Optional example value
+ * - category: Functional category for organization
+ *
+ * Data types:
+ * - string: Text values and identifiers
+ * - number: Numeric measurements and counts
+ * - date: Timestamps and calendar dates
+ * - boolean: True/false flags
+ * - array: Lists of values
+ *
+ * Categories:
+ * - general: Basic file properties
+ * - document: Document-specific metadata
+ * - media: Audio/video properties
+ * - image: Image-specific properties
+ * - audio: Audio-specific properties
+ * - location: Geographic information
+ * - system: Operating system metadata
+ */
 export interface SpotlightAttributeDefinition {
   name: string
   description: string
@@ -8,6 +35,34 @@ export interface SpotlightAttributeDefinition {
   category: 'general' | 'document' | 'media' | 'image' | 'audio' | 'location' | 'system'
 }
 
+/**
+ * Schema for validating Spotlight attribute definitions.
+ * Ensures attribute metadata is correctly formatted.
+ *
+ * @example
+ * Basic attribute:
+ * ```typescript
+ * const attr = AttributeDefinitionSchema.parse({
+ *   name: 'kMDItemDisplayName',
+ *   description: 'The display name of the file',
+ *   type: 'string',
+ *   example: 'example.pdf',
+ *   category: 'general'
+ * })
+ * ```
+ *
+ * @example
+ * Numeric attribute:
+ * ```typescript
+ * const attr = AttributeDefinitionSchema.parse({
+ *   name: 'kMDItemPixelHeight',
+ *   description: 'Height of the image in pixels',
+ *   type: 'number',
+ *   example: 1080,
+ *   category: 'image'
+ * })
+ * ```
+ */
 export const AttributeDefinitionSchema = z.object({
   name: z.string(),
   description: z.string(),
@@ -16,7 +71,37 @@ export const AttributeDefinitionSchema = z.object({
   category: z.enum(['general', 'document', 'media', 'image', 'audio', 'location', 'system'])
 })
 
-// Common content types with descriptions
+/**
+ * Common content types with descriptions.
+ * Maps Uniform Type Identifiers (UTIs) to human-readable descriptions.
+ *
+ * Categories:
+ * - Images: JPEG, PNG, etc.
+ * - Audio: MP3, WAV, etc.
+ * - Video: MP4, MOV, etc.
+ * - Documents: PDF, text, RTF
+ * - Web: HTML, XML
+ * - System: Archives, executables
+ *
+ * @example
+ * Using content types:
+ * ```typescript
+ * console.log(CONTENT_TYPES['public.image'])
+ * // Output: "Image files (JPEG, PNG, etc.)"
+ *
+ * console.log(CONTENT_TYPES['public.audio'])
+ * // Output: "Audio files (MP3, WAV, etc.)"
+ * ```
+ *
+ * @example
+ * Checking file type:
+ * ```typescript
+ * const type = 'public.pdf'
+ * if (type in CONTENT_TYPES) {
+ *   console.log(`File type: ${CONTENT_TYPES[type]}`)
+ * }
+ * ```
+ */
 export const CONTENT_TYPES = {
   'public.image': 'Image files (JPEG, PNG, etc.)',
   'public.audio': 'Audio files (MP3, WAV, etc.)',
