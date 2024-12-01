@@ -8,6 +8,22 @@ import type { MdfindOptions } from './schemas/index.js'
 
 const execAsync = promisify(exec)
 
+/**
+ * Custom error class for mdfind-related errors.
+ * Provides additional context about the error through the stderr output.
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await mdfind('invalid:query')
+ * } catch (error) {
+ *   if (error instanceof MdfindError) {
+ *     console.error('Search failed:', error.message)
+ *     console.error('Command output:', error.stderr)
+ *   }
+ * }
+ * ```
+ */
 export class MdfindError extends Error {
   public readonly name = 'MdfindError' as const
 
@@ -19,6 +35,12 @@ export class MdfindError extends Error {
   }
 }
 
+/**
+ * Validates the search query and options for consistency.
+ * Throws an error if the configuration is invalid.
+ *
+ * @internal
+ */
 const validateInput = (query: string, options: MdfindOptions) => {
   if (options.live && options.count) {
     throw new Error('Cannot use live and count options together')
@@ -42,6 +64,11 @@ const validateInput = (query: string, options: MdfindOptions) => {
   }
 }
 
+/**
+ * Expands the tilde (~) in paths to the user's home directory.
+ *
+ * @internal
+ */
 const expandPath = (path: string): string => {
   if (path.startsWith('~/')) {
     return path.replace('~', homedir())
@@ -49,6 +76,72 @@ const expandPath = (path: string): string => {
   return path
 }
 
+/**
+ * Execute a Spotlight search using the macOS mdfind command.
+ * This function provides access to macOS's powerful file and metadata search capabilities.
+ *
+ * @param {string} query - The Spotlight query to execute. This can be:
+ *   - A simple text search (e.g., "typescript")
+ *   - A metadata attribute query (e.g., "kMDItemContentType == 'public.image'")
+ *   - A natural language query with -interpret (e.g., "images created today")
+ *
+ * @param {MdfindOptions} options - Configuration options:
+ *   - onlyIn: Limit search to a specific directory
+ *   - name: Search by filename pattern
+ *   - live: Enable real-time updates
+ *   - count: Return only the count of matches
+ *   - attr: Return specific metadata attributes
+ *   - smartFolder: Use a saved search
+ *   - nullSeparator: Use null character as separator
+ *   - maxBuffer: Maximum buffer size for results
+ *   - reprint: Reprint results in live mode
+ *   - literal: Disable special query interpretation
+ *   - interpret: Enable natural language interpretation
+ *
+ * @returns {Promise<string[]>} Array of file paths matching the query
+ *
+ * @throws {MdfindError}
+ *   - If the query is invalid
+ *   - If options are incompatible
+ *   - If mdfind command fails
+ *   - If buffer size is exceeded
+ *
+ * @example
+ * Basic text search:
+ * ```typescript
+ * const files = await mdfind('typescript')
+ * ```
+ *
+ * @example
+ * Search with metadata attributes:
+ * ```typescript
+ * const images = await mdfind(
+ *   'kMDItemContentType == "public.image" && kMDItemPixelHeight > 1080',
+ *   { onlyIn: '~/Pictures' }
+ * )
+ * ```
+ *
+ * @example
+ * Natural language search:
+ * ```typescript
+ * const docs = await mdfind(
+ *   'documents modified today',
+ *   { interpret: true }
+ * )
+ * ```
+ *
+ * @example
+ * Get specific metadata:
+ * ```typescript
+ * const dates = await mdfind(
+ *   'kind:image',
+ *   {
+ *     interpret: true,
+ *     attr: 'kMDItemContentCreationDate'
+ *   }
+ * )
+ * ```
+ */
 export const mdfind = async (query: string, options: MdfindOptions = {}): Promise<string[]> => {
   const validatedOptions = MdfindOptionsSchema.parse(options)
   validateInput(query, validatedOptions)
@@ -95,6 +188,79 @@ export const mdfind = async (query: string, options: MdfindOptions = {}): Promis
   }
 }
 
+/**
+ * Execute a live Spotlight search that monitors for changes in real-time.
+ * This function starts a long-running process that emits events when files matching
+ * the query are created, modified, or deleted.
+ *
+ * @param {string} query - The Spotlight query to execute (same format as mdfind)
+ *
+ * @param {Omit<MdfindOptions, 'live' | 'count'>} options - Configuration options:
+ *   - onlyIn: Limit monitoring to a specific directory
+ *   - name: Monitor by filename pattern
+ *   - attr: Return specific metadata attributes
+ *   - smartFolder: Use a saved search
+ *   - nullSeparator: Use null character as separator
+ *   - reprint: Reprint all results when changes occur
+ *   - literal: Disable special query interpretation
+ *   - interpret: Enable natural language interpretation
+ *
+ * @param {LiveSearchEvents} events - Event handlers:
+ *   - onResult: Called with array of file paths when matches are found
+ *   - onError: Called when an error occurs
+ *   - onEnd: Optional callback when the search ends
+ *
+ * @returns {ChildProcess} The spawned mdfind process
+ *   - Use process.kill() to stop monitoring
+ *   - Process automatically ends when parent process exits
+ *
+ * @throws {MdfindError}
+ *   - If the query is invalid
+ *   - If options are incompatible
+ *   - If mdfind command fails to start
+ *
+ * @example
+ * Monitor for new images:
+ * ```typescript
+ * const search = mdfindLive(
+ *   'kMDItemContentType == "public.image"',
+ *   { onlyIn: '~/Pictures' },
+ *   {
+ *     onResult: paths => {
+ *       console.log('New or modified images:', paths)
+ *     },
+ *     onError: error => {
+ *       console.error('Search error:', error.message)
+ *     },
+ *     onEnd: () => {
+ *       console.log('Search ended')
+ *     }
+ *   }
+ * )
+ *
+ * // Stop monitoring after 5 minutes
+ * setTimeout(() => {
+ *   search.kill()
+ * }, 5 * 60 * 1000)
+ * ```
+ *
+ * @example
+ * Monitor with metadata attributes:
+ * ```typescript
+ * const search = mdfindLive(
+ *   'kMDItemContentType == "public.audio"',
+ *   {
+ *     attr: 'kMDItemDurationSeconds',
+ *     reprint: true
+ *   },
+ *   {
+ *     onResult: paths => {
+ *       console.log('Audio files with duration:', paths)
+ *     }
+ *   }
+ * )
+ * ```
+ */
 export const mdfindLive = (
   query: string,
   options: Omit<MdfindOptions, 'live' | 'count'>,

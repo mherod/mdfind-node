@@ -28,6 +28,7 @@
     "example:batch": "tsx examples/batch.ts",
     "example:extended": "tsx examples/extended-metadata.ts",
     "example:discover": "tsx examples/discover.ts",
+    "example:search": "tsx examples/advanced-search.ts",
     "lint": "eslint \"src/**/*.ts\" \"examples/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" \"examples/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"examples/**/*.ts\"",
