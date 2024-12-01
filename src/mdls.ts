@@ -9,6 +9,12 @@ import {
 
 const execAsync = promisify(exec)
 
+/**
+ * Parse raw mdls output with null character separators.
+ * Used when the raw option is enabled to get unformatted values.
+ *
+ * @internal
+ */
 const parseRawOutput = (output: string, nullMarker: string): string[] => {
   return output
     .split('\0')
@@ -16,6 +22,12 @@ const parseRawOutput = (output: string, nullMarker: string): string[] => {
     .filter(Boolean) as string[]
 }
 
+/**
+ * Parse standard mdls output format into structured metadata.
+ * Handles type coercion and array parsing.
+ *
+ * @internal
+ */
 const parseStandardOutput = (output: string): MetadataResult => {
   const result: Record<string, unknown> = {}
   const lines = output.split('\n')
@@ -63,27 +75,49 @@ const parseStandardOutput = (output: string): MetadataResult => {
 
 /**
  * Get metadata for a file using the macOS mdls command.
- * This function provides low-level access to file metadata attributes.
+ * Retrieves Spotlight metadata attributes and their values.
  *
- * @param {string} filePath - The path to the file to analyze
- * @param {MdlsOptions} [options] - Configuration options for metadata extraction
- * @returns {Promise<MetadataResult | string[]>} File metadata as an object or array
- * @throws {Error} If the mdls command fails or the file cannot be accessed
+ * @param {string} filePath - Path to the file to get metadata for
+ * @param {MdlsOptions} [options] - Configuration options:
+ *   - attributes: List of specific attributes to retrieve
+ *   - raw: Return raw attribute values without parsing
+ *   - nullMarker: String to use for null values
+ *
+ * @returns {Promise<MetadataResult | string[]>}
+ *   - With raw=false: Object mapping attribute names to parsed values
+ *   - With raw=true: Array of raw attribute values
+ *
+ * @throws {Error}
+ *   - If the file doesn't exist
+ *   - If the file can't be read
+ *   - If mdls command fails
  *
  * @example
+ * Get all metadata:
  * ```typescript
- * // Get all metadata
- * const metadata = await getMetadata('file.jpg')
+ * const metadata = await getMetadata('path/to/file.jpg')
+ * console.log(metadata.kMDItemPixelHeight) // 1080
+ * console.log(metadata.kMDItemContentCreationDate) // Date object
+ * ```
  *
- * // Get specific attributes
- * const partial = await getMetadata('file.jpg', {
- *   attributes: ['kMDItemContentType', 'kMDItemPixelHeight']
+ * @example
+ * Get specific attributes:
+ * ```typescript
+ * const metadata = await getMetadata('path/to/file.pdf', {
+ *   attributes: [
+ *     'kMDItemDisplayName',
+ *     'kMDItemContentType',
+ *     'kMDItemAuthors'
+ *   ]
  * })
+ * ```
  *
- * // Get raw output
- * const raw = await getMetadata('file.jpg', {
+ * @example
+ * Get raw values:
+ * ```typescript
+ * const values = await getMetadata('path/to/file.mp3', {
  *   raw: true,
- *   nullMarker: '(null)'
+ *   nullMarker: 'N/A'
  * })
  * ```
  */
