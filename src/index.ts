@@ -1,6 +1,7 @@
 export * from './mdfind.js'
 export * from './mdls.js'
 export * from './mdutil.js'
+export * from './mdimport.js'
 export * from './query-builder.js'
 export * from './batch.js'
 export { getExtendedMetadata, getExifData, getXMPData, getBasicMetadata } from './metadata.js'
@@ -14,7 +15,11 @@ export {
   type LiveSearchEvents,
   type ExifData,
   type XMPData,
-  type ExtendedMetadata
+  type ExtendedMetadata,
+  type MdimportOptions,
+  type MdimportResult,
+  type ImporterInfo,
+  type AttributeInfo
 } from './schemas/index.js'
 
 // Attribute discovery utilities

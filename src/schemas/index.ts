@@ -37,3 +37,15 @@ export {
   type MdlsOptions,
   type MdutilOptions
 } from './options/index.js'
+
+// Mdimport schemas and types
+export {
+  MdimportOptionsSchema,
+  MdimportResultSchema,
+  ImporterInfoSchema,
+  AttributeInfoSchema,
+  type MdimportOptions,
+  type MdimportResult,
+  type ImporterInfo,
+  type AttributeInfo
+} from './core/mdimport.js'

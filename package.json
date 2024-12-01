@@ -37,7 +37,8 @@
     "examples:discover": "tsx examples/discover.ts",
     "examples:content-types": "tsx examples/content-types.ts",
     "examples:advanced-search": "tsx examples/advanced-search.ts",
-    "examples:mdutil": "tsx examples/mdutil-status.ts"
+    "examples:mdutil": "tsx examples/mdutil-status.ts",
+    "examples:mdimport": "tsx examples/mdimport.ts"
   },
   "keywords": [
     "macos",
