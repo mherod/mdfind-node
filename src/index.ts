@@ -22,3 +22,15 @@ export {
   type XMPData,
   type ExtendedMetadata
 } from './schemas/index.js'
+
+// Attribute discovery utilities
+export {
+  discoverAttributes,
+  getContentTypes,
+  getSpotlightAttributes,
+  searchAttributes,
+  getAttributesByCategory,
+  getAttributeDefinition,
+  getContentTypeDescription,
+  type SpotlightAttributeDefinition
+} from './discover.js'

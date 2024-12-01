@@ -99,6 +99,59 @@ console.log('EXIF:', metadata.exif)
 console.log('XMP:', metadata.xmp)
 ```
 
+## 🔍 Attribute Discovery
+
+Spotlight attributes can be complex to work with. This library provides utilities to help you discover and understand available attributes:
+
+```typescript
+import { discoverAttributes, searchAttributes, getContentTypes } from 'mdfind-node'
+
+// Get all available attributes for a specific file
+const fileAttributes = discoverAttributes('path/to/file.jpg')
+
+// Search for attributes by keyword
+const imageAttrs = searchAttributes('image')
+console.log(imageAttrs)
+// [
+//   {
+//     name: 'kMDItemPixelHeight',
+//     description: 'Height of the image in pixels',
+//     type: 'number',
+//     example: 1080,
+//     category: 'image'
+//   },
+//   ...
+// ]
+
+// Get all known content types
+const contentTypes = getContentTypes()
+console.log(contentTypes['public.image']) // 'Image files (JPEG, PNG, etc.)'
+
+// Get attributes by category
+const locationAttrs = getAttributesByCategory('location')
+```
+
+### Common Content Types
+
+- `public.image` - Image files (JPEG, PNG, etc.)
+- `public.audio` - Audio files (MP3, WAV, etc.)
+- `public.movie` - Video files (MP4, MOV, etc.)
+- `public.pdf` - PDF documents
+- `public.plain-text` - Plain text files
+- `public.folder` - Folders/Directories
+
+### Common Attributes
+
+- `kMDItemContentType` - The type of content
+- `kMDItemDisplayName` - The display name of the file
+- `kMDItemFSName` - The filename on disk
+- `kMDItemContentCreationDate` - When the file was created
+- `kMDItemContentModificationDate` - When the file was last modified
+- `kMDItemPixelHeight` - Height of the image in pixels
+- `kMDItemPixelWidth` - Width of the image in pixels
+- `kMDItemLatitude` - GPS latitude where photo/video was taken
+- `kMDItemLongitude` - GPS longitude where photo/video was taken
+
 ## 👩‍💻 Development
 
 ```bash
