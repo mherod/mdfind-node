@@ -33,12 +33,20 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"examples/**/*.ts\"",
     "prepare": "husky"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mherod/mdfind-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mherod/mdfind-node/issues"
+  },
+  "homepage": "https://github.com/mherod/mdfind-node#readme",
   "keywords": [
     "mdfind",
     "macos",
     "spotlight"
   ],
-  "author": "",
+  "author": "Matthew Herod",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.10.1",
