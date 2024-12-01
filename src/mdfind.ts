@@ -100,9 +100,13 @@ export const mdfindLive = (
   options: Omit<MdfindOptions, 'live' | 'count'>,
   events: LiveSearchEvents
 ): ChildProcess => {
-  const validatedOptions = MdfindOptionsSchema.omit({ live: true, count: true }).parse(options)
+  const validatedOptions = MdfindOptionsSchema.parse({
+    ...options,
+    live: true,
+    count: false
+  })
   const validatedEvents = LiveSearchEventsSchema.parse(events)
-  validateInput(query, { ...validatedOptions, live: true })
+  validateInput(query, validatedOptions)
 
   const args: string[] = []
 
