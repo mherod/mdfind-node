@@ -14,15 +14,6 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
         project: './tsconfig.json'
-      },
-      globals: {
-        console: 'readonly',
-        process: 'readonly',
-        module: 'readonly',
-        require: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        Buffer: 'readonly'
       }
     },
     plugins: {
@@ -74,7 +65,7 @@ export default [
       '@typescript-eslint/no-unnecessary-condition': 'warn',
 
       // General code quality rules
-      'no-console': 'off', // Allow console in examples
+      'no-console': 'error',
       'no-debugger': 'error',
       'no-alert': 'error',
       'no-var': 'error',
@@ -119,7 +110,9 @@ export default [
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       'complexity': 'off',
-      'max-lines-per-function': 'off'
+      'max-lines-per-function': 'off',
+      'no-console': 'off',
+      'no-undef': 'off'
     }
   },
   {
