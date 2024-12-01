@@ -1,263 +1,382 @@
-import { SpotlightContentTypeSchema, type SpotlightContentType } from './schemas/core/spotlight.js'
-
-type ComparisonOperator = '==' | '!=' | '>' | '>=' | '<' | '<='
-type LogicalOperator = '&&' | '||'
-
-interface QueryCondition {
-  attribute: string
-  operator: ComparisonOperator
-  value: string | number | boolean | Date
-}
+import { mdfind } from './mdfind.js'
+import type { MdfindOptions } from './schemas/index.js'
 
 /**
- * A fluent API for building Spotlight search queries.
- * This class provides a type-safe way to construct complex Spotlight queries
- * with support for various content types, metadata attributes, and conditions.
+ * A fluent interface for building and executing Spotlight queries.
+ * Provides a type-safe and intuitive way to construct complex search criteria.
+ *
+ * The builder supports:
+ * - Content type filtering
+ * - Metadata attribute matching
+ * - File name patterns
+ * - Directory scoping
+ * - Natural language interpretation
+ * - Literal query mode
+ * - Custom attribute queries
  *
  * @example
+ * Basic usage:
  * ```typescript
- * const query = new SpotlightQuery()
+ * const files = await new QueryBuilder()
  *   .contentType('public.image')
- *   .createdAfter(new Date('2024-01-01'))
- *   .hasGPS()
- *   .minImageDimensions(3000, 2000)
- *
- * const results = await mdfind(query.toString())
+ *   .createdAfter('2023-01-01')
+ *   .inDirectory('~/Pictures')
+ *   .execute()
  * ```
  */
-export class SpotlightQuery {
-  private conditions: QueryCondition[] = []
-  private operator: LogicalOperator = '&&'
+export class QueryBuilder {
+  private conditions: string[] = []
+  private options: MdfindOptions = {}
 
   /**
-   * Set the logical operator for combining conditions.
+   * Add a raw query condition.
+   * Useful for complex conditions or custom metadata attributes.
    *
-   * @param {LogicalOperator} operator - The operator to use ('&&' or '||')
-   * @returns {this} The query builder instance for chaining
+   * @param {string} condition - Raw Spotlight query condition
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.useOperator('||')  // Match any condition
-   * query.useOperator('&&')  // Match all conditions
+   * const files = await new QueryBuilder()
+   *   .where('kMDItemPixelHeight > 1080')
+   *   .where('kMDItemPixelWidth > 1920')
+   *   .execute()
    * ```
    */
-  public useOperator(operator: LogicalOperator): this {
-    this.operator = operator
+  where(condition: string): this {
+    this.conditions.push(condition)
     return this
   }
 
   /**
-   * Add a raw condition to the query.
+   * Filter by content type (UTI).
+   * Common types include:
+   * - public.image
+   * - public.audio
+   * - public.movie
+   * - public.pdf
+   * - public.plain-text
+   * - public.rtf
+   * - public.html
+   * - public.font
    *
-   * @param {string} attribute - The Spotlight attribute name
-   * @param {ComparisonOperator} operator - The comparison operator
-   * @param {string | number | boolean | Date} value - The value to compare against
-   * @returns {this} The query builder instance for chaining
+   * @param {string} type - Uniform Type Identifier (UTI)
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.where('kMDItemPixelWidth', '>=', 1920)
-   * query.where('kMDItemAuthors', '==', 'John Doe')
+   * const images = await new QueryBuilder()
+   *   .contentType('public.image')
+   *   .execute()
    * ```
    */
-  public where(
-    attribute: string,
-    operator: ComparisonOperator,
-    value: string | number | boolean | Date
-  ): this {
-    this.conditions.push({ attribute, operator, value })
+  contentType(type: string): this {
+    this.conditions.push(`kMDItemContentType == "${type}"`)
     return this
   }
 
   /**
-   * Filter by content type.
+   * Filter by file name pattern.
+   * Supports glob-style patterns.
    *
-   * @param {SpotlightContentType} type - The content type to filter by
-   * @returns {this} The query builder instance for chaining
-   * @throws {Error} If the content type is invalid
+   * @param {string} pattern - File name pattern to match
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.contentType('public.image')  // Find images
-   * query.contentType('public.audio')  // Find audio files
+   * const files = await new QueryBuilder()
+   *   .named('*.pdf')
+   *   .execute()
    * ```
    */
-  public contentType(type: SpotlightContentType): this {
-    SpotlightContentTypeSchema.parse(type)
-    return this.where('kMDItemContentType', '==', type)
+  named(pattern: string): this {
+    this.options.name = pattern
+    return this
+  }
+
+  /**
+   * Limit search to a specific directory.
+   * Supports tilde (~) expansion for home directory.
+   *
+   * @param {string} path - Directory path to search in
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .inDirectory('~/Documents')
+   *   .execute()
+   * ```
+   */
+  inDirectory(path: string): this {
+    this.options.onlyIn = path
+    return this
   }
 
   /**
    * Filter by creation date.
    *
-   * @param {Date} date - The date to compare against
-   * @returns {this} The query builder instance for chaining
+   * @param {string | Date} date - Date string or Date object
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.createdAfter(new Date('2024-01-01'))
+   * const files = await new QueryBuilder()
+   *   .createdAfter('2023-01-01')
+   *   .execute()
    * ```
    */
-  public createdAfter(date: Date): this {
-    return this.where('kMDItemContentCreationDate', '>', date)
+  createdAfter(date: string | Date): this {
+    const timestamp = new Date(date).getTime() / 1000
+    this.conditions.push(`kMDItemContentCreationDate > $time.iso(${timestamp})`)
+    return this
+  }
+
+  /**
+   * Filter by creation date.
+   *
+   * @param {string | Date} date - Date string or Date object
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .createdBefore('2023-12-31')
+   *   .execute()
+   * ```
+   */
+  createdBefore(date: string | Date): this {
+    const timestamp = new Date(date).getTime() / 1000
+    this.conditions.push(`kMDItemContentCreationDate < $time.iso(${timestamp})`)
+    return this
   }
 
   /**
    * Filter by modification date.
    *
-   * @param {Date} date - The date to compare against
-   * @returns {this} The query builder instance for chaining
+   * @param {string | Date} date - Date string or Date object
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.modifiedAfter(new Date('2024-01-01'))
+   * const files = await new QueryBuilder()
+   *   .modifiedAfter('2023-01-01')
+   *   .execute()
    * ```
    */
-  public modifiedAfter(date: Date): this {
-    return this.where('kMDItemContentModificationDate', '>', date)
+  modifiedAfter(date: string | Date): this {
+    const timestamp = new Date(date).getTime() / 1000
+    this.conditions.push(`kMDItemContentModificationDate > $time.iso(${timestamp})`)
+    return this
   }
 
   /**
-   * Filter by last used date.
+   * Filter by modification date.
    *
-   * @param {Date} date - The date to compare against
-   * @returns {this} The query builder instance for chaining
+   * @param {string | Date} date - Date string or Date object
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.usedAfter(new Date('2024-01-01'))
+   * const files = await new QueryBuilder()
+   *   .modifiedBefore('2023-12-31')
+   *   .execute()
    * ```
    */
-  public usedAfter(date: Date): this {
-    return this.where('kMDItemLastUsedDate', '>', date)
+  modifiedBefore(date: string | Date): this {
+    const timestamp = new Date(date).getTime() / 1000
+    this.conditions.push(`kMDItemContentModificationDate < $time.iso(${timestamp})`)
+    return this
   }
 
   /**
-   * Filter files with GPS data.
+   * Filter by file size in bytes.
    *
-   * @returns {this} The query builder instance for chaining
+   * @param {number} bytes - Minimum file size in bytes
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.hasGPS()  // Find files with location data
+   * const files = await new QueryBuilder()
+   *   .largerThan(1024 * 1024) // 1MB
+   *   .execute()
    * ```
    */
-  public hasGPS(): this {
-    return this.where('kMDItemLatitude', '>', 0)
+  largerThan(bytes: number): this {
+    this.conditions.push(`kMDItemFSSize > ${bytes}`)
+    return this
   }
 
   /**
-   * Filter by author.
+   * Filter by file size in bytes.
    *
-   * @param {string} author - The author name to search for
-   * @returns {this} The query builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * query.byAuthor('John Doe')
-   * ```
-   */
-  public byAuthor(author: string): this {
-    return this.where('kMDItemAuthors', '==', author)
-  }
-
-  /**
-   * Filter by keyword.
-   *
-   * @param {string} keyword - The keyword to search for
-   * @returns {this} The query builder instance for chaining
+   * @param {number} bytes - Maximum file size in bytes
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.hasKeyword('vacation')
+   * const files = await new QueryBuilder()
+   *   .smallerThan(1024 * 100) // 100KB
+   *   .execute()
    * ```
    */
-  public hasKeyword(keyword: string): this {
-    return this.where('kMDItemKeywords', '==', keyword)
+  smallerThan(bytes: number): this {
+    this.conditions.push(`kMDItemFSSize < ${bytes}`)
+    return this
   }
 
   /**
    * Filter by file extension.
    *
-   * @param {string} ext - The file extension (with or without leading dot)
-   * @returns {this} The query builder instance for chaining
+   * @param {string} ext - File extension without dot
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.extension('jpg')
-   * query.extension('.pdf')
+   * const files = await new QueryBuilder()
+   *   .extension('pdf')
+   *   .execute()
    * ```
    */
-  public extension(ext: string): this {
-    return this.where('kMDItemFSName', '==', `*.${ext.replace(/^\./, '')}`)
+  extension(ext: string): this {
+    this.conditions.push(`kMDItemFSName ==[c] "*.${ext}"`)
+    return this
   }
 
   /**
-   * Filter by minimum image dimensions.
+   * Filter by author name.
    *
-   * @param {number} width - The minimum width in pixels
-   * @param {number} height - The minimum height in pixels
-   * @returns {this} The query builder instance for chaining
+   * @param {string} name - Author's name
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.minImageDimensions(1920, 1080)  // Find HD or larger images
+   * const files = await new QueryBuilder()
+   *   .author('John Doe')
+   *   .execute()
    * ```
    */
-  public minImageDimensions(width: number, height: number): this {
-    return this.where('kMDItemPixelWidth', '>=', width).where('kMDItemPixelHeight', '>=', height)
+  author(name: string): this {
+    this.conditions.push(`kMDItemAuthors == "${name}"`)
+    return this
   }
 
   /**
-   * Filter by minimum audio quality.
+   * Filter by text content.
    *
-   * @param {number} sampleRate - The minimum sample rate in Hz
-   * @param {number} bitRate - The minimum bit rate in bits per second
-   * @returns {this} The query builder instance for chaining
+   * @param {string} text - Text to search for
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * query.minAudioQuality(44100, 320000)  // Find high-quality audio
+   * const files = await new QueryBuilder()
+   *   .containing('important')
+   *   .execute()
    * ```
    */
-  public minAudioQuality(sampleRate: number, bitRate: number): this {
-    return this.where('kMDItemAudioSampleRate', '>=', sampleRate).where(
-      'kMDItemAudioBitRate',
-      '>=',
-      bitRate
-    )
+  containing(text: string): this {
+    this.conditions.push(`kMDItemTextContent == "${text}"w`)
+    return this
   }
 
   /**
-   * Convert the query to a string that can be used with mdfind.
+   * Enable natural language query interpretation.
    *
-   * @returns {string} The Spotlight query string
+   * @returns {this} The builder instance for chaining
    *
    * @example
    * ```typescript
-   * const queryString = query.toString()
-   * const results = await mdfind(queryString)
+   * const files = await new QueryBuilder()
+   *   .where('images created today')
+   *   .interpret()
+   *   .execute()
    * ```
    */
-  public toString(): string {
-    if (this.conditions.length === 0) {
-      return '*'
-    }
+  interpret(): this {
+    this.options.interpret = true
+    return this
+  }
 
-    return this.conditions
-      .map(({ attribute, operator, value }) => {
-        let formattedValue = value
+  /**
+   * Disable special query interpretation.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .where('kMDItemFSName == "*.txt"')
+   *   .literal()
+   *   .execute()
+   * ```
+   */
+  literal(): this {
+    this.options.literal = true
+    return this
+  }
 
-        if (typeof value === 'string') {
-          // Escape quotes in string values
-          formattedValue = `"${value.replace(/"/g, '\\"')}"`
-        } else if (value instanceof Date) {
-          // Format date for Spotlight query
-          formattedValue = `$time.iso(${value.toISOString()})`
-        }
+  /**
+   * Return only the count of matches.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const count = await new QueryBuilder()
+   *   .contentType('public.image')
+   *   .count()
+   *   .execute()
+   * ```
+   */
+  count(): this {
+    this.options.count = true
+    return this
+  }
 
-        return `${attribute} ${operator} ${formattedValue}`
-      })
-      .join(` ${this.operator} `)
+  /**
+   * Return specific metadata attributes.
+   *
+   * @param {string} attribute - Spotlight metadata attribute
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const metadata = await new QueryBuilder()
+   *   .contentType('public.image')
+   *   .attribute('kMDItemPixelHeight')
+   *   .execute()
+   * ```
+   */
+  attribute(attribute: string): this {
+    this.options.attr = attribute
+    return this
+  }
+
+  /**
+   * Execute the search with the built query and options.
+   *
+   * @returns {Promise<string[]>} Array of file paths matching the query
+   * @throws {Error} If the query is invalid or search fails
+   *
+   * @example
+   * Complex search:
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .contentType('public.image')
+   *   .createdAfter('2023-01-01')
+   *   .largerThan(1024 * 1024)
+   *   .inDirectory('~/Pictures')
+   *   .attribute('kMDItemPixelHeight')
+   *   .execute()
+   * ```
+   */
+  async execute(): Promise<string[]> {
+    const query = this.conditions.join(' && ') || ''
+    return mdfind(query, this.options)
   }
 }
+
+/**
+ * @deprecated Use QueryBuilder instead. This export is maintained for backward compatibility.
+ */
+export const SpotlightQuery = QueryBuilder
