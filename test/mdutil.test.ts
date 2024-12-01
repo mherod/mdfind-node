@@ -22,6 +22,7 @@ describe('mdutil', () => {
         Indexing enabled.`
 
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(null, { stdout: mockOutput, stderr: '' })
         return {} as any
       })
@@ -36,6 +37,7 @@ describe('mdutil', () => {
 
     it('should handle errors', async () => {
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(new Error('Operation not permitted'), { stdout: '', stderr: '' })
         return {} as any
       })
@@ -47,6 +49,7 @@ describe('mdutil', () => {
   describe('setIndexing', () => {
     it('should enable indexing', async () => {
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(null, { stdout: '', stderr: '' })
         return {} as any
       })
@@ -56,6 +59,7 @@ describe('mdutil', () => {
 
     it('should disable indexing', async () => {
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(null, { stdout: '', stderr: '' })
         return {} as any
       })
@@ -65,6 +69,7 @@ describe('mdutil', () => {
 
     it('should handle invalid operation error', async () => {
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(new Error('invalid operation'), { stdout: '', stderr: '' })
         return {} as any
       })
@@ -74,6 +79,7 @@ describe('mdutil', () => {
 
     it('should handle unknown state error', async () => {
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(new Error('unknown indexing state'), { stdout: '', stderr: '' })
         return {} as any
       })
@@ -87,6 +93,7 @@ describe('mdutil', () => {
   describe('eraseAndRebuildIndex', () => {
     it('should erase and rebuild index', async () => {
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(null, { stdout: '', stderr: '' })
         return {} as any
       })
@@ -96,6 +103,7 @@ describe('mdutil', () => {
 
     it('should handle invalid operation error', async () => {
       vi.mocked(exec).mockImplementation((_, callback) => {
+        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
         callback(new Error('invalid operation'), { stdout: '', stderr: '' })
         return {} as any
       })
