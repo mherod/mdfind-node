@@ -6,7 +6,7 @@ async function main() {
   try {
     // Example 1: Get all metadata for an image
     console.log('\n1. Getting all metadata for a recent photo:')
-    const photoPath = join(homedir(), 'Pictures', 'photo.jpg')
+    const photoPath = join(homedir(), 'Pictures', 'Photos Library.photoslibrary')
     try {
       const metadata = await getExtendedMetadata(photoPath)
       console.log('\nBasic Info:')
@@ -17,7 +17,7 @@ async function main() {
       console.log(JSON.stringify(metadata.xmp, null, 2))
     } catch (error) {
       if (error instanceof Error) {
-        console.log('No photo.jpg found in Pictures:', error.message)
+        console.log('No Photos Library found:', error.message)
       }
     }
 
@@ -42,13 +42,13 @@ async function main() {
       }
     } catch (error) {
       if (error instanceof Error) {
-        console.log('No photo.jpg found in Pictures:', error.message)
+        console.log('No Photos Library found:', error.message)
       }
     }
 
     // Example 3: Get XMP data for a document
     console.log('\n3. Getting XMP data for a PDF:')
-    const pdfPath = join(homedir(), 'Documents', 'document.pdf')
+    const pdfPath = join(homedir(), 'Library', 'Preferences', 'com.apple.LaunchServices.plist')
     try {
       const xmpData = await getXMPData(pdfPath)
       console.log('\nDocument Info:')
@@ -64,16 +64,16 @@ async function main() {
       console.log('- Web Statement:', xmpData.webStatement)
     } catch (error) {
       if (error instanceof Error) {
-        console.log('No document.pdf found in Documents:', error.message)
+        console.log('No LaunchServices.plist found:', error.message)
       }
     }
 
     // Example 4: Get basic metadata for multiple files
-    console.log('\n4. Getting basic metadata for recent files:')
+    console.log('\n4. Getting basic metadata for system files:')
     const files = [
-      join(homedir(), 'Documents', 'document.pdf'),
-      join(homedir(), 'Pictures', 'photo.jpg'),
-      join(homedir(), 'Downloads', 'archive.zip')
+      join(homedir(), 'Library', 'Preferences', 'com.apple.LaunchServices.plist'),
+      join(homedir(), 'Library', 'Preferences', 'com.apple.finder.plist'),
+      join(homedir(), 'Library', 'Preferences', 'com.apple.dock.plist')
     ]
 
     for (const file of files) {
