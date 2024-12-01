@@ -19,10 +19,10 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
-    "lint": "eslint \"src/**/*.ts\" \"examples/**/*.ts\"",
-    "lint:fix": "eslint \"src/**/*.ts\" \"examples/**/*.ts\" --fix",
-    "format": "prettier --write \"src/**/*.ts\" \"examples/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"examples/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"examples/**/*.ts\" \"test/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"examples/**/*.ts\" \"test/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"examples/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"examples/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest",
     "test:watch": "vitest watch",
     "coverage": "vitest run --coverage",
@@ -38,7 +38,9 @@
     "example:discover": "tsx examples/discover.ts",
     "example:advanced-search": "tsx examples/advanced-search.ts",
     "example:content-types": "tsx examples/content-types.ts",
-    "example:mdutil": "tsx examples/mdutil-status.ts"
+    "example:mdutil": "tsx examples/mdutil-status.ts",
+    "test:e2e": "vitest test/e2e.test.ts",
+    "test:e2e:ui": "vitest --ui test/e2e.test.ts"
   },
   "keywords": [
     "macos",

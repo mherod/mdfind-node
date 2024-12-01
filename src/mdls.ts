@@ -10,31 +10,41 @@ import {
 const execAsync = promisify(exec)
 
 /**
- * Parse raw mdls output with null character separators.
- * Used when the raw option is enabled to get unformatted values.
+ * Parse raw mdls output.
+ * Raw output concatenates values without separators.
+ * We need to match values to the requested attributes in order.
  *
  * @internal
  */
-const parseRawMetadata = (output: string, nullMarker: string): Record<string, string | null> => {
-  const result: Record<string, string | null> = {}
-  const lines = output.split('\n')
+const parseRawMetadata = (
+  output: string,
+  attributes: string[]
+): Record<string, string | number | boolean | Date | string[] | null> => {
+  const result: Record<string, string | number | boolean | Date | string[] | null> = {}
+  const values = output.trim().split('\0')
 
-  for (const line of lines) {
-    const parts = line.split('=').map(s => s.trim())
-    const key = parts[0]
-    const value = parts[1]
+  // Map values to attributes
+  for (let i = 0; i < attributes.length && i < values.length; i++) {
+    const value = values[i]
+    const attr = attributes[i]
 
-    if (key && value !== undefined) {
-      result[key] = value === nullMarker ? null : value
+    if (value === '(null)') {
+      result[attr] = null
+    } else if (value.startsWith('(') && value.endsWith(')')) {
+      // Handle arrays
+      const content = value.slice(1, -1).trim()
+      result[attr] = content ? content.split(',').map(s => s.trim().replace(/^"(.*)"$/, '$1')) : []
+    } else {
+      result[attr] = value
     }
   }
 
-  return result
+  return MetadataResultSchema.parse(result)
 }
 
 /**
  * Parse standard mdls output format into structured metadata.
- * Handles type coercion and array parsing.
+ * Uses Zod schema for type coercion.
  *
  * @internal
  */
@@ -50,38 +60,20 @@ const parseFormattedMetadata = (output: string): MetadataResult => {
     if (!key || rawValue === undefined) continue
 
     const cleanKey = key.trim()
-    let value: string | number | boolean | Date | string[] | null = null
+    const cleanValue = rawValue.trim()
 
-    // Remove surrounding quotes if present
-    const cleanValue = rawValue.trim().replace(/^"(.*)"$/, '$1')
-
-    // Parse arrays
-    if (cleanValue.startsWith('(') && cleanValue.endsWith(')')) {
-      const arrayContent = cleanValue.slice(1, -1).trim()
-      value = arrayContent ? arrayContent.split(',').map(s => s.trim()) : []
+    if (cleanValue === '(null)') {
+      result[cleanKey] = null
+    } else if (cleanValue.startsWith('(') && cleanValue.endsWith(')')) {
+      // Handle arrays
+      const content = cleanValue.slice(1, -1).trim()
+      result[cleanKey] = content
+        ? content.split(',').map(s => s.trim().replace(/^"(.*)"$/, '$1'))
+        : []
+    } else {
+      // Remove surrounding quotes if present
+      result[cleanKey] = cleanValue.replace(/^"(.*)"$/, '$1')
     }
-    // Parse dates
-    else if (cleanValue.includes('date') || cleanValue.includes('Date')) {
-      try {
-        value = new Date(cleanValue)
-      } catch {
-        value = null
-      }
-    }
-    // Parse numbers
-    else if (/^-?\d+(\.\d+)?$/.test(cleanValue)) {
-      value = Number(cleanValue)
-    }
-    // Parse booleans
-    else if (cleanValue === 'true' || cleanValue === 'false') {
-      value = cleanValue === 'true'
-    }
-    // Keep as string
-    else {
-      value = cleanValue
-    }
-
-    result[cleanKey] = value
   }
 
   return MetadataResultSchema.parse(result)
@@ -97,43 +89,13 @@ const parseFormattedMetadata = (output: string): MetadataResult => {
  *   - raw: Return raw attribute values without parsing
  *   - nullMarker: String to use for null values
  *
- * @returns {Promise<MetadataResult | string[]>}
- *   - With raw=false: Object mapping attribute names to parsed values
- *   - With raw=true: Array of raw attribute values
+ * @returns {Promise<MetadataResult>}
+ *   Object mapping attribute names to parsed values
  *
  * @throws {Error}
  *   - If the file doesn't exist
  *   - If the file can't be read
  *   - If mdls command fails
- *
- * @example
- * Get all metadata:
- * ```typescript
- * const metadata = await getMetadata('path/to/file.jpg')
- * console.log(metadata.kMDItemPixelHeight) // 1080
- * console.log(metadata.kMDItemContentCreationDate) // Date object
- * ```
- *
- * @example
- * Get specific attributes:
- * ```typescript
- * const metadata = await getMetadata('path/to/file.pdf', {
- *   attributes: [
- *     'kMDItemDisplayName',
- *     'kMDItemContentType',
- *     'kMDItemAuthors'
- *   ]
- * })
- * ```
- *
- * @example
- * Get raw values:
- * ```typescript
- * const values = await getMetadata('path/to/file.mp3', {
- *   raw: true,
- *   nullMarker: 'N/A'
- * })
- * ```
  */
 export const getMetadata = async (
   filePath: string,
@@ -161,7 +123,7 @@ export const getMetadata = async (
     const { stdout } = await execAsync(`mdls ${args.map(arg => `"${arg}"`).join(' ')}`)
 
     if (validatedOptions.raw) {
-      return parseRawMetadata(stdout, validatedOptions.nullMarker || '(null)')
+      return parseRawMetadata(stdout, validatedOptions.attributes)
     }
 
     return parseFormattedMetadata(stdout)

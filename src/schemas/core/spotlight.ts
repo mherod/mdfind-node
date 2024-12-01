@@ -152,54 +152,78 @@ export const SpotlightAttributeSchema = z
 /**
  * Schema for metadata query results.
  * Validates and transforms raw metadata values into appropriate types.
- *
- * Supported value types:
- * - Strings: Text values and identifiers
- * - Numbers: Numeric values and measurements
- * - Dates: Timestamps and calendar dates
- * - Booleans: True/false flags
- * - String arrays: Lists of values
- * - null: Missing or undefined values
- *
- * The schema includes automatic type coercion:
- * - String numbers are converted to numbers
- * - Date strings are parsed into Date objects
- * - Failed date parsing returns null
- *
- * @example
- * Parsing metadata results:
- * ```typescript
- * const result = MetadataResultSchema.parse({
- *   kMDItemDisplayName: "example.jpg",
- *   kMDItemPixelWidth: "1920",
- *   kMDItemContentCreationDate: "2024-01-01 12:00:00",
- *   kMDItemKeywords: ["vacation", "beach"]
- * })
- * ```
  */
-export const MetadataResultSchema = z
-  .record(
-    z.string(),
-    z.union([
-      z.string(),
-      z.coerce.number(),
-      z.coerce.date(),
-      z.boolean(),
-      z.array(z.string()),
-      z.null()
-    ])
-  )
-  .transform(obj => {
-    // Clean up any failed coercions
-    return Object.fromEntries(
-      Object.entries(obj).map(([key, value]) => {
-        if (value instanceof Date && isNaN(value.getTime())) {
-          return [key, null]
+export const MetadataResultSchema = z.record(z.string(), z.unknown()).transform(obj => {
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === '(null)' || value === null) {
+      result[key] = null
+      continue
+    }
+
+    // Handle arrays
+    if (typeof value === 'string' && value.startsWith('(') && value.endsWith(')')) {
+      const content = value.slice(1, -1).trim()
+      result[key] = content ? content.split(',').map(s => s.trim().replace(/^"(.*)"$/, '$1')) : []
+      continue
+    }
+
+    // Handle dates
+    if (
+      typeof value === 'string' &&
+      (key.includes('Date') || key.includes('date')) &&
+      !value.includes('(null)')
+    ) {
+      try {
+        const date = new Date(value)
+        if (!isNaN(date.getTime())) {
+          result[key] = date
+          continue
         }
-        return [key, value]
-      })
-    )
-  })
+      } catch {
+        // Fall through to other type checks
+      }
+    }
+
+    // Handle numbers
+    if (
+      typeof value === 'string' &&
+      (key.includes('Size') ||
+        key.includes('Count') ||
+        key.includes('Number') ||
+        key.includes('BitRate') ||
+        key.includes('Duration') ||
+        key.includes('Height') ||
+        key.includes('Width') ||
+        key.includes('Length') ||
+        key.includes('Speed') ||
+        key.includes('Time'))
+    ) {
+      const num = Number(value)
+      if (!isNaN(num)) {
+        result[key] = num
+        continue
+      }
+    }
+
+    // Handle booleans
+    if (value === 'true' || value === 'false') {
+      result[key] = value === 'true'
+      continue
+    }
+
+    // Handle strings
+    if (typeof value === 'string') {
+      result[key] = value.replace(/^"(.*)"$/, '$1')
+      continue
+    }
+
+    result[key] = value
+  }
+
+  return result as MetadataResult
+})
 
 export type SpotlightContentType = z.infer<typeof SpotlightContentTypeSchema>
 export type SpotlightAttribute = z.infer<typeof SpotlightAttributeSchema>

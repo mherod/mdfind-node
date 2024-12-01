@@ -116,7 +116,32 @@ export default [
     }
   },
   {
-    files: ['test/**/*.ts', '*.config.ts'],
+    files: ['test/**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        project: './tsconfig.json'
+      },
+      globals: {
+        process: true,
+        console: true,
+        setTimeout: true
+      }
+    },
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      'max-lines-per-function': 'off',
+      'complexity': 'off',
+      'require-await': 'off',
+      'no-console': 'off',
+      'no-promise-executor-return': 'off'
+    }
+  },
+  {
+    files: ['*.config.ts'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
