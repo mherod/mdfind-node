@@ -7,7 +7,7 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 export default [
   eslint.configs.recommended,
   {
-    files: ['**/*.ts'],
+    files: ['src/**/*.ts', 'test/**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -108,6 +108,14 @@ export default [
   },
   {
     files: ['examples/**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        project: './tsconfig.examples.json'
+      }
+    },
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       'complexity': 'off',

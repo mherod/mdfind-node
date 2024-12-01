@@ -943,7 +943,8 @@ export class QueryBuilder {
    * @returns {Promise<string[]>} Array of matching file paths
    */
   public async execute(): Promise<string[]> {
-    return mdfind(this.toString(), this.options)
+    const result = await mdfind(this.toString(), this.options)
+    return result
   }
 }
 
