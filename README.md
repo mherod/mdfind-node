@@ -1,14 +1,39 @@
-# mdfind-node
+# mdfind-node 🔍
 
-A Node.js wrapper for macOS's `mdfind` command, providing programmatic access to Spotlight search functionality.
+> Supercharged macOS file and metadata search using `mdfind` for Node.js! ✨
 
-## Installation
+[![npm version](https://badge.fury.io/js/mdfind-node.svg)](https://www.npmjs.com/package/mdfind-node)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+
+A powerful Node.js wrapper for macOS's Spotlight search (`mdfind`), bringing system-level search capabilities to your JavaScript applications.
+
+## ✨ Features
+
+- 🚀 **Full Spotlight Integration** - Access all macOS Spotlight search capabilities
+- 🔄 **Live Search Support** - Real-time file monitoring and updates
+- 🎯 **Smart Queries** - Fluent query builder for complex searches
+- 📦 **Batch Operations** - Run multiple searches in parallel or sequence
+- 📝 **Rich Metadata** - Access EXIF, XMP, and system metadata
+- 💪 **Type-Safe** - Full TypeScript support with detailed types
+- 🛠️ **Configurable** - Extensive options for fine-tuned control
+
+## 📥 Installation
 
 ```bash
+# Using pnpm (recommended)
 pnpm add mdfind-node
+
+# Using npm
+npm install mdfind-node
+
+# Using yarn
+yarn add mdfind-node
+
+# Using bun
+bun add mdfind-node
 ```
 
-## Usage
+## 🚀 Quick Start
 
 ```typescript
 import { mdfind } from 'mdfind-node'
@@ -16,94 +41,83 @@ import { mdfind } from 'mdfind-node'
 // Basic search
 const results = await mdfind('query')
 
-// Search with options
-const files = await mdfind('image', {
-  onlyIn: '~/Documents',  // Search only in specific directory
-  name: 'photo.jpg',      // Search by filename
-  live: false,            // Don't keep the query active
-  count: false,           // Return full results, not just count
-  attr: 'kMDItemAuthors', // Fetch specific metadata attribute
-  nullSeparator: false    // Use newline as separator (for xargs compatibility)
+// Advanced search with options
+const photos = await mdfind('kMDItemContentType == "public.image"', {
+  onlyIn: '~/Pictures',
+  live: true,  // Keep watching for changes
+  attr: 'kMDItemPixelHeight'  // Get image heights
 })
 
-// Search by filename
-const headerFiles = await mdfind('', {
-  name: 'stdlib.h'
-})
+// Use the query builder for complex searches
+import { SpotlightQuery } from 'mdfind-node'
 
-// Count results
-const count = await mdfind('MyFavoriteAuthor', {
-  count: true
-})
+const query = new SpotlightQuery()
+  .contentType('public.image')
+  .createdAfter(new Date('2024-01-01'))
+  .hasGPS()
+  .minImageDimensions(3000, 2000)
 
-// Search in smart folder
-const smartFolderResults = await mdfind('', {
-  smartFolder: 'MySmartFolder'
-})
+const highResPhotos = await mdfind(query.toString())
 ```
 
-## Error Handling
+## 🎯 Key Features
 
-The library throws `MdfindError` when the command fails:
+### 🔄 Live Search
 
 ```typescript
-try {
-  const results = await mdfind('query')
-} catch (error) {
-  if (error instanceof MdfindError) {
-    console.error('Search failed:', error.message)
-    console.error('stderr:', error.stderr)
-  }
-}
+import { mdfindLive } from 'mdfind-node'
+
+const search = mdfindLive('kMDItemContentType == "public.pdf"', {
+  onlyIn: '~/Downloads',
+  reprint: true
+}, {
+  onResult: paths => console.log('New matches:', paths),
+  onError: error => console.error('Search error:', error),
+  onEnd: () => console.log('Search ended')
+})
 ```
 
-## Development
+### 📦 Batch Operations
+
+```typescript
+import { mdfindBatch } from 'mdfind-node'
+
+const results = await mdfindBatch([
+  { query: 'image', onlyIn: '~/Pictures' },
+  { query: 'document', onlyIn: '~/Documents' }
+])
+```
+
+### 📝 Extended Metadata
+
+```typescript
+import { getExtendedMetadata } from 'mdfind-node'
+
+const metadata = await getExtendedMetadata('photo.jpg')
+console.log('EXIF:', metadata.exif)
+console.log('XMP:', metadata.xmp)
+```
+
+## 👩‍💻 Development
 
 ```bash
 # Install dependencies
 pnpm install
 
-# Build
-pnpm build
-
-# Watch mode
+# Development build with watch mode
 pnpm dev
 
-# Type check
-pnpm typecheck
+# Production build
+pnpm build
 
-# Lint code
-pnpm lint
-
-# Fix linting issues
-pnpm lint:fix
-
-# Format code
-pnpm format
-
-# Check formatting
-pnpm format:check
+# Run examples
+pnpm example       # Basic example
+pnpm example:live  # Live search example
+pnpm example:query # Query builder example
 ```
 
-### Code Quality Tools
+## 📄 License
 
-This project uses several tools to ensure code quality:
+ISC © [Matthew Herod](https://github.com/mherod)
 
-- **TypeScript**: For static type checking
-- **ESLint**: For code linting with TypeScript support
-- **Prettier**: For consistent code formatting
-- **Husky**: For git hooks
-- **lint-staged**: For running linters on staged files
-
-The pre-commit hook automatically runs ESLint and Prettier on staged TypeScript files to ensure code quality and consistency.
-
-### Configuration Files
-
-- `.eslintrc.json`: ESLint configuration with TypeScript and Prettier integration
-- `.prettierrc`: Prettier configuration for code formatting
-- `tsconfig.json`: TypeScript compiler configuration
-- `.husky/pre-commit`: Git pre-commit hook configuration
-
-## License
-
-ISC
+---
