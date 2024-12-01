@@ -1,4 +1,4 @@
-import { mdfindLive, MdfindError } from '../src/mdfind.js'
+import { MdfindError, mdfindLive } from '../src/mdfind.js'
 import { homedir } from 'os'
 import { join } from 'path'
 

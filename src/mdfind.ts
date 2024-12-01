@@ -1,25 +1,30 @@
-import { exec, spawn } from 'node:child_process'
+import { type ChildProcess, exec, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { ChildProcess } from 'node:child_process'
 import { homedir } from 'os'
+
+import { type LiveSearchEvents, LiveSearchEventsSchema } from './schemas/core/events.js'
 import { MdfindOptionsSchema } from './schemas/options/index.js'
-import { LiveSearchEventsSchema, type LiveSearchEvents } from './schemas/core/events.js'
 import type { MdfindOptions } from './schemas/index.js'
 
 const execAsync = promisify(exec)
 
+const expandPath = (path: string): string => path.replace(/^~/, homedir())
+
 /**
  * Custom error class for mdfind-related errors.
- * Provides additional context about the error through the stderr output.
+ * Provides additional context from stderr output.
+ *
+ * Properties:
+ * - message: Error description
+ * - stderr: Raw error output from the command
  *
  * @example
  * ```typescript
  * try {
- *   await mdfind('invalid:query')
+ *   await mdfind('invalid query')
  * } catch (error) {
  *   if (error instanceof MdfindError) {
- *     console.error('Search failed:', error.message)
- *     console.error('Command output:', error.stderr)
+ *     console.error('Search failed:', error.stderr)
  *   }
  * }
  * ```
@@ -36,110 +41,54 @@ export class MdfindError extends Error {
 }
 
 /**
- * Validates the search query and options for consistency.
- * Throws an error if the configuration is invalid.
+ * Validate search options for compatibility.
+ * Throws if incompatible options are provided.
  *
  * @internal
  */
-const validateInput = (query: string, options: MdfindOptions) => {
+const validateInput = (query: string, options: MdfindOptions): void => {
   if (options.live && options.count) {
     throw new Error('Cannot use live and count options together')
-  }
-
-  if (options.reprint && !options.live) {
-    throw new Error('reprint option requires live option')
   }
 
   if (options.literal && options.interpret) {
     throw new Error('Cannot use literal and interpret options together')
   }
 
-  if (options.name && !query.trim().length) {
+  if (options.name && !query.trim()) {
     // When using -name, query is optional
     return
   }
 
-  if (!query.trim().length) {
+  if (!query.trim()) {
     throw new Error('Query cannot be empty unless using -name option')
   }
 }
 
 /**
- * Expands the tilde (~) in paths to the user's home directory.
+ * Execute a Spotlight search using the mdfind command.
+ * Returns an array of file paths that match the query.
  *
- * @internal
- */
-const expandPath = (path: string): string => {
-  if (path.startsWith('~/')) {
-    return path.replace('~', homedir())
-  }
-  return path
-}
-
-/**
- * Execute a Spotlight search using the macOS mdfind command.
- * This function provides access to macOS's powerful file and metadata search capabilities.
- *
- * @param {string} query - The Spotlight query to execute. This can be:
- *   - A simple text search (e.g., "typescript")
- *   - A metadata attribute query (e.g., "kMDItemContentType == 'public.image'")
- *   - A natural language query with -interpret (e.g., "images created today")
- *
- * @param {MdfindOptions} options - Configuration options:
- *   - onlyIn: Limit search to a specific directory
- *   - name: Search by filename pattern
- *   - live: Enable real-time updates
- *   - count: Return only the count of matches
- *   - attr: Return specific metadata attributes
- *   - smartFolder: Use a saved search
- *   - nullSeparator: Use null character as separator
- *   - maxBuffer: Maximum buffer size for results
- *   - reprint: Reprint results in live mode
- *   - literal: Disable special query interpretation
- *   - interpret: Enable natural language interpretation
- *
- * @returns {Promise<string[]>} Array of file paths matching the query
- *
- * @throws {MdfindError}
- *   - If the query is invalid
- *   - If options are incompatible
- *   - If mdfind command fails
- *   - If buffer size is exceeded
+ * @param {string} query - The search query
+ * @param {MdfindOptions} options - Search options
+ * @returns {Promise<string[]>} Array of matching file paths
+ * @throws {MdfindError} If the search fails
  *
  * @example
- * Basic text search:
+ * Basic search:
  * ```typescript
- * const files = await mdfind('typescript')
+ * const files = await mdfind('kind:image')
+ * console.log('Found images:', files)
  * ```
  *
  * @example
- * Search with metadata attributes:
+ * Search with options:
  * ```typescript
- * const images = await mdfind(
- *   'kMDItemContentType == "public.image" && kMDItemPixelHeight > 1080',
- *   { onlyIn: '~/Pictures' }
- * )
- * ```
- *
- * @example
- * Natural language search:
- * ```typescript
- * const docs = await mdfind(
- *   'documents modified today',
- *   { interpret: true }
- * )
- * ```
- *
- * @example
- * Get specific metadata:
- * ```typescript
- * const dates = await mdfind(
- *   'kind:image',
- *   {
- *     interpret: true,
- *     attr: 'kMDItemContentCreationDate'
- *   }
- * )
+ * const files = await mdfind('kind:document', {
+ *   onlyIn: '~/Documents',
+ *   name: '*.pdf',
+ *   attr: 'kMDItemTitle'
+ * })
  * ```
  */
 export const mdfind = async (query: string, options: MdfindOptions = {}): Promise<string[]> => {
@@ -148,41 +97,60 @@ export const mdfind = async (query: string, options: MdfindOptions = {}): Promis
 
   const args: string[] = []
 
-  if (validatedOptions.onlyIn) args.push('-onlyin', expandPath(validatedOptions.onlyIn))
-  if (validatedOptions.name) args.push('-name', validatedOptions.name)
-  if (validatedOptions.live) args.push('-live')
-  if (validatedOptions.count) args.push('-count')
-  if (validatedOptions.attr) args.push('-attr', validatedOptions.attr)
-  if (validatedOptions.smartFolder) args.push('-s', validatedOptions.smartFolder)
-  if (validatedOptions.nullSeparator) args.push('-0')
-  if (validatedOptions.reprint) args.push('-reprint')
-  if (validatedOptions.literal) args.push('-literal')
-  if (validatedOptions.interpret) args.push('-interpret')
+  if (validatedOptions.onlyIn) {
+    args.push('-onlyin', expandPath(validatedOptions.onlyIn))
+  }
+  if (validatedOptions.name) {
+    args.push('-name', validatedOptions.name)
+  }
+  if (validatedOptions.live) {
+    args.push('-live')
+  }
+  if (validatedOptions.count) {
+    args.push('-count')
+  }
+  if (validatedOptions.attr) {
+    args.push('-attr', validatedOptions.attr)
+  }
+  if (validatedOptions.smartFolder) {
+    args.push('-s', validatedOptions.smartFolder)
+  }
+  if (validatedOptions.nullSeparator) {
+    args.push('-0')
+  }
+  if (validatedOptions.reprint) {
+    args.push('-reprint')
+  }
+  if (validatedOptions.literal) {
+    args.push('-literal')
+  }
+  if (validatedOptions.interpret) {
+    args.push('-interpret')
+  }
 
-  // Add the query at the end if it's not empty
-  if (query.trim().length) {
-    args.push(query.trim())
+  const trimmedQuery = query.trim()
+  if (trimmedQuery) {
+    args.push(trimmedQuery)
   }
 
   try {
     const { stdout, stderr } = await execAsync(`mdfind ${args.map(arg => `"${arg}"`).join(' ')}`, {
-      maxBuffer: validatedOptions.maxBuffer || 1024 * 1024 * 10 // 10MB default buffer
+      maxBuffer: options.maxBuffer ?? 1024 * 1024 * 10 // 10MB default buffer
     })
 
     // mdfind sometimes outputs locale loading messages to stderr, which aren't errors
-    const realError = stderr && !stderr.includes('[UserQueryParser] Loading keywords')
-    if (realError) {
+    if (stderr && !stderr.includes('[UserQueryParser] Loading keywords')) {
       throw new MdfindError('mdfind command failed', stderr)
     }
 
     // Split by newline or null character based on options
-    const separator = validatedOptions.nullSeparator ? '\0' : '\n'
+    const separator = options.nullSeparator ? '\0' : '\n'
     return stdout.trim().split(separator).filter(Boolean)
   } catch (error) {
     if (error instanceof Error) {
       // Define a type for the error object that includes stderr
       type ExecError = Error & { stderr?: string }
-      throw new MdfindError(error.message, (error as ExecError).stderr || '')
+      throw new MdfindError(error.message, (error as ExecError).stderr ?? '')
     }
     throw error
   }
@@ -190,179 +158,105 @@ export const mdfind = async (query: string, options: MdfindOptions = {}): Promis
 
 /**
  * Execute a live Spotlight search that monitors for changes in real-time.
- * This function starts a long-running process that emits events when files matching
- * the query are created, modified, or deleted.
+ * Returns a ChildProcess that can be killed to stop monitoring.
  *
- * @param {string} query - The Spotlight query to execute (same format as mdfind)
- *
- * @param {Omit<MdfindOptions, 'live' | 'count'>} options - Configuration options:
- *   - onlyIn: Limit monitoring to a specific directory
- *   - name: Monitor by filename pattern
- *   - attr: Return specific metadata attributes
- *   - smartFolder: Use a saved search
- *   - nullSeparator: Use null character as separator
- *   - reprint: Reprint all results when changes occur
- *   - literal: Disable special query interpretation
- *   - interpret: Enable natural language interpretation
- *
- * @param {LiveSearchEvents} events - Event handlers:
- *   - onResult: Called with array of file paths when matches are found
- *   - onError: Called when an error occurs
- *   - onEnd: Optional callback when the search ends
- *
- * @returns {ChildProcess} The spawned mdfind process
- *   - Use process.kill() to stop monitoring
- *   - Process automatically ends when parent process exits
- *
- * @throws {MdfindError}
- *   - If the query is invalid
- *   - If options are incompatible
- *   - If mdfind command fails to start
+ * @param {string} query - The search query
+ * @param {MdfindOptions} options - Search options
+ * @param {LiveSearchEvents} events - Event handlers for results and errors
+ * @returns {ChildProcess} The search process
  *
  * @example
- * Monitor for new images:
  * ```typescript
- * const search = mdfindLive(
- *   'kMDItemContentType == "public.image"',
- *   { onlyIn: '~/Pictures' },
- *   {
- *     onResult: paths => {
- *       console.log('New or modified images:', paths)
- *     },
- *     onError: error => {
- *       console.error('Search error:', error.message)
- *     },
- *     onEnd: () => {
- *       console.log('Search ended')
- *     }
- *   }
- * )
+ * const search = mdfindLive('kind:image', {
+ *   onlyIn: '~/Pictures'
+ * }, {
+ *   onResult: paths => console.log('Found:', paths),
+ *   onError: error => console.error('Error:', error),
+ *   onEnd: () => console.log('Search ended')
+ * })
  *
- * // Stop monitoring after 5 minutes
- * setTimeout(() => {
- *   search.kill()
- * }, 5 * 60 * 1000)
- * ```
- *
- * @example
- * Monitor with metadata attributes:
- * ```typescript
- * const search = mdfindLive(
- *   'kMDItemContentType == "public.audio"',
- *   {
- *     attr: 'kMDItemDurationSeconds',
- *     reprint: true
- *   },
- *   {
- *     onResult: paths => {
- *       console.log('Audio files with duration:', paths)
- *     }
- *   }
- * )
+ * // Stop the search after 10 seconds
+ * setTimeout(() => search.kill(), 10000)
  * ```
  */
 export const mdfindLive = (
   query: string,
-  options: Omit<MdfindOptions, 'live' | 'count'>,
+  options: MdfindOptions = {},
   events: LiveSearchEvents
 ): ChildProcess => {
-  const validatedOptions = MdfindOptionsSchema.parse({
-    ...options,
-    live: true,
-    count: false
-  })
+  const validatedOptions = { ...options, live: true }
   const validatedEvents = LiveSearchEventsSchema.parse(events)
   validateInput(query, validatedOptions)
 
-  const args: string[] = []
+  const args: string[] = ['-live']
 
-  if (validatedOptions.onlyIn) args.push('-onlyin', expandPath(validatedOptions.onlyIn))
-  if (validatedOptions.name) args.push('-name', validatedOptions.name)
-  if (validatedOptions.attr) args.push('-attr', validatedOptions.attr)
-  if (validatedOptions.smartFolder) args.push('-s', validatedOptions.smartFolder)
-  if (validatedOptions.nullSeparator) args.push('-0')
-  if (validatedOptions.reprint) args.push('-reprint')
-  if (validatedOptions.literal) args.push('-literal')
-  if (validatedOptions.interpret) args.push('-interpret')
-
-  // Always add live for this function
-  args.push('-live')
-
-  // Add the query at the end if it's not empty
-  if (query.trim().length) {
-    args.push(query.trim())
+  if (validatedOptions.onlyIn) {
+    args.push('-onlyin', expandPath(validatedOptions.onlyIn))
+  }
+  if (validatedOptions.name) {
+    args.push('-name', validatedOptions.name)
+  }
+  if (validatedOptions.attr) {
+    args.push('-attr', validatedOptions.attr)
+  }
+  if (validatedOptions.smartFolder) {
+    args.push('-s', validatedOptions.smartFolder)
+  }
+  if (validatedOptions.nullSeparator) {
+    args.push('-0')
+  }
+  if (validatedOptions.reprint) {
+    args.push('-reprint')
+  }
+  if (validatedOptions.literal) {
+    args.push('-literal')
+  }
+  if (validatedOptions.interpret) {
+    args.push('-interpret')
   }
 
-  const child = spawn('mdfind', args, {
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
+  const trimmedQuery = query.trim()
+  if (trimmedQuery) {
+    args.push(trimmedQuery)
+  }
 
   let buffer = ''
-  let isFirstChunk = true
-  let resultsStarted = false
+  const child = spawn('mdfind', args)
 
   child.stdout.setEncoding('utf8')
   child.stderr.setEncoding('utf8')
 
   child.stdout.on('data', (data: string) => {
-    // Skip the control message at the end
-    if (data.includes('[Type ctrl-C to exit]')) {
-      const parts = data.split('[Type ctrl-C to exit]')
-      buffer += parts[0]
-      resultsStarted = true
-    } else {
-      buffer += data
-    }
-
-    if (!resultsStarted && !buffer.includes('[Type ctrl-C to exit]')) {
-      return
-    }
-
+    buffer += data
     const separator = validatedOptions.nullSeparator ? '\0' : '\n'
     const lines = buffer.split(separator)
 
     // Keep the last incomplete line in the buffer
-    buffer = lines.pop() || ''
+    buffer = lines.pop() ?? ''
 
-    const paths = lines.filter(
-      line =>
-        line.trim() &&
-        !line.includes('[UserQueryParser]') &&
-        !line.includes('[Type ctrl-C to exit]')
-    )
-
-    if (paths.length > 0 || isFirstChunk) {
+    const paths = lines.filter(Boolean)
+    if (paths.length > 0) {
       validatedEvents.onResult(paths)
-      isFirstChunk = false
     }
   })
 
   child.stderr.on('data', (data: string) => {
-    const stderr = data.toString()
-    if (!stderr.includes('[UserQueryParser] Loading keywords')) {
-      validatedEvents.onError(new MdfindError('mdfind command failed', stderr))
+    // Ignore locale loading messages
+    if (!data.includes('[UserQueryParser] Loading keywords')) {
+      validatedEvents.onError(new MdfindError('mdfind command failed', data))
     }
   })
 
   child.on('close', () => {
     // Process any remaining data in the buffer
-    if (buffer.length > 0) {
+    if (buffer) {
       const separator = validatedOptions.nullSeparator ? '\0' : '\n'
-      const paths = buffer
-        .split(separator)
-        .filter(
-          line =>
-            line.trim() &&
-            !line.includes('[UserQueryParser]') &&
-            !line.includes('[Type ctrl-C to exit]')
-        )
+      const paths = buffer.split(separator).filter(Boolean)
       if (paths.length > 0) {
         validatedEvents.onResult(paths)
       }
     }
-    if (validatedEvents.onEnd) {
-      validatedEvents.onEnd()
-    }
+    validatedEvents.onEnd?.()
   })
 
   return child

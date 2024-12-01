@@ -1,40 +1,43 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import {
-  IndexStatusSchema,
-  MdutilOptionsSchema,
   type IndexStatus,
-  type MdutilOptions
+  IndexStatusSchema,
+  type MdutilOptions,
+  MdutilOptionsSchema
 } from './schemas/index.js'
 
 const execAsync = promisify(exec)
 
 /**
  * Custom error class for mdutil-related errors.
- * Provides additional context about root privileges requirement.
  *
  * Properties:
  * - message: Error description
+ * - stderr: Raw error output from the command
  * - requiresRoot: Whether the operation needs root access
  *
  * @example
  * ```typescript
  * try {
- *   await listIndexContents('/')
+ *   await eraseAndRebuildIndex('/Volumes/Data')
  * } catch (error) {
- *   if (error instanceof MdutilError && error.requiresRoot) {
- *     console.log('This operation requires sudo')
+ *   if (error instanceof MdutilError) {
+ *     console.error('Failed:', error.message)
+ *     console.error('Details:', error.stderr)
  *   }
  * }
  * ```
  */
 export class MdutilError extends Error {
+  public readonly name = 'MdutilError' as const
+
   constructor(
     message: string,
+    public readonly stderr: string,
     public readonly requiresRoot: boolean = false
   ) {
     super(message)
-    this.name = 'MdutilError'
   }
 }
 
@@ -104,7 +107,12 @@ export const getIndexingStatus = async (
     return parseIndexingStatus(stdout)
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to get indexing status: ${error.message}`)
+      const requiresRoot = error.message.includes('Operation not permitted')
+      throw new MdutilError(
+        `Failed to get indexing status: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
     }
     throw error
   }
@@ -153,6 +161,7 @@ export const setIndexing = async (volumePath: string, enable: boolean): Promise<
       const requiresRoot = error.message.includes('Operation not permitted')
       throw new MdutilError(
         `Failed to ${enable ? 'enable' : 'disable'} indexing: ${error.message}`,
+        error.message,
         requiresRoot
       )
     }
@@ -193,7 +202,11 @@ export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> =>
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(`Failed to erase and rebuild index: ${error.message}`, requiresRoot)
+      throw new MdutilError(
+        `Failed to erase and rebuild index: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
     }
     throw error
   }
@@ -233,7 +246,11 @@ export const listIndexContents = async (volumePath: string): Promise<string> => 
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Must be root')
-      throw new MdutilError(`Failed to list index contents: ${error.message}`, requiresRoot)
+      throw new MdutilError(
+        `Failed to list index contents: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
     }
     throw error
   }
@@ -267,11 +284,11 @@ export const listIndexContents = async (volumePath: string): Promise<string> => 
  */
 export const flushCaches = async (volumePath: string): Promise<void> => {
   try {
-    await execAsync(`mdutil -p "${volumePath}"`)
+    await execAsync(`mdutil -f "${volumePath}"`)
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(`Failed to flush caches: ${error.message}`, requiresRoot)
+      throw new MdutilError(`Failed to flush caches: ${error.message}`, error.message, requiresRoot)
     }
     throw error
   }
@@ -310,7 +327,7 @@ export const removeIndex = async (volumePath: string): Promise<void> => {
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(`Failed to remove index: ${error.message}`, requiresRoot)
+      throw new MdutilError(`Failed to remove index: ${error.message}`, error.message, requiresRoot)
     }
     throw error
   }

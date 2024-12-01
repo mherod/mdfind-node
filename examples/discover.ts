@@ -1,11 +1,9 @@
 import {
   discoverAttributes,
+  getAttributesByCategory,
   getContentTypes,
-  searchAttributes,
-  getAttributesByCategory
+  searchAttributes
 } from '../src/discover.js'
-import { homedir } from 'os'
-import { join } from 'path'
 
 async function main() {
   try {
@@ -21,7 +19,7 @@ async function main() {
     const imageAttrs = searchAttributes('image')
     imageAttrs.forEach(attr => {
       console.log(`- ${attr.name}: ${attr.description}`)
-      if (attr.example) {
+      if (attr.example != null) {
         console.log(`  Example: ${JSON.stringify(attr.example)}`)
       }
     })
@@ -31,7 +29,7 @@ async function main() {
     const locationAttrs = getAttributesByCategory('location')
     locationAttrs.forEach(attr => {
       console.log(`- ${attr.name}: ${attr.description}`)
-      if (attr.example) {
+      if (attr.example != null) {
         console.log(`  Example: ${JSON.stringify(attr.example)}`)
       }
     })
@@ -39,15 +37,16 @@ async function main() {
     // Example 4: Discover attributes for a specific file
     console.log('\n4. Discovering attributes for a system file:')
     try {
-      const systemFile = join(homedir(), 'Library', 'Preferences', 'com.apple.finder.plist')
+      const systemFile = '~/Library/Preferences/com.apple.finder.plist'
       const fileAttrs = discoverAttributes(systemFile)
-      Object.entries(fileAttrs)
-        .slice(0, 10)
-        .forEach(([name, description]) => {
+      const entries = Object.entries(fileAttrs)
+      if (entries.length > 0) {
+        entries.slice(0, 10).forEach(([name, description]) => {
           console.log(`- ${name}: ${description}`)
         })
-      if (Object.keys(fileAttrs).length > 10) {
-        console.log(`... and ${Object.keys(fileAttrs).length - 10} more attributes`)
+        if (entries.length > 10) {
+          console.log(`... and ${entries.length - 10} more attributes`)
+        }
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -68,11 +67,12 @@ async function main() {
       }
     }
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error:', error.message)
-      process.exit(1)
-    }
+    console.error('Error:', error)
+    process.exit(1)
   }
 }
 
-main()
+void main().catch(error => {
+  console.error('Unhandled error:', error)
+  process.exit(1)
+})

@@ -1,5 +1,5 @@
 import { mdfind } from './mdfind.js'
-import { SpotlightAttributeSchema, type MdfindOptions } from './schemas/index.js'
+import { type MdfindOptions, SpotlightAttributeSchema } from './schemas/index.js'
 import { z } from 'zod'
 
 /**
@@ -120,29 +120,44 @@ export interface BatchSearchResult {
  * ])
  * ```
  */
-export const mdfindBatch = async (searches: BatchSearchOptions[]): Promise<BatchSearchResult[]> => {
-  const validatedSearches = searches.map(search => BatchSearchOptionsSchema.parse(search))
+export async function mdfindBatch(
+  searches: Array<{ query: string; options?: MdfindOptions }>,
+  concurrency = 3
+): Promise<Array<BatchSearchResult>> {
+  const results: BatchSearchResult[] = []
+  const queue = searches.map((search, index) => ({ ...search, index }))
+  const pool = new Set<Promise<void>>()
 
-  const searchPromises = validatedSearches.map(async (search): Promise<BatchSearchResult> => {
-    try {
-      const { query, ...options } = search
-      const results = await mdfind(query, options)
-      return {
-        query,
-        options: search,
-        results
-      }
-    } catch (error) {
-      return {
-        query: search.query,
-        options: search,
-        results: [],
-        error: error instanceof Error ? error : new Error('Unknown error')
-      }
+  while (queue.length > 0 || pool.size > 0) {
+    while (pool.size < concurrency && queue.length > 0) {
+      const search = queue.shift()
+      if (!search) break
+      const { query, options, index } = search
+      const promise = (async () => {
+        try {
+          const searchResults = await mdfind(query, options)
+          results[index] = {
+            query,
+            options: options ?? {},
+            results: searchResults
+          }
+        } catch (error) {
+          results[index] = {
+            query,
+            options: options ?? {},
+            error: error instanceof Error ? error : new Error(String(error))
+          }
+        }
+      })()
+      pool.add(promise)
+      void promise.then(() => pool.delete(promise))
     }
-  })
+    if (pool.size >= concurrency || queue.length === 0) {
+      await Promise.race(pool)
+    }
+  }
 
-  return Promise.all(searchPromises)
+  return results
 }
 
 /**
@@ -273,18 +288,16 @@ export const mdfindSequential = async (
  * )
  * ```
  */
-export const mdfindMultiDirectory = async (
+export async function mdfindMultiDirectory(
   query: string,
   directories: string[],
-  options: Omit<MdfindOptions, 'onlyIn'> = {}
-): Promise<BatchSearchResult[]> => {
+  concurrency = 3
+): Promise<Array<BatchSearchResult>> {
   const searches = directories.map(dir => ({
     query,
-    ...options,
-    onlyIn: dir
+    options: { onlyIn: dir }
   }))
-
-  return mdfindBatch(searches)
+  return mdfindBatch(searches, concurrency)
 }
 
 /**
@@ -329,16 +342,14 @@ export const mdfindMultiDirectory = async (
  * )
  * ```
  */
-export const mdfindMultiQuery = async (
+export async function mdfindMultiQuery(
   queries: string[],
   directory?: string,
-  options: Omit<MdfindOptions, 'onlyIn'> = {}
-): Promise<BatchSearchResult[]> => {
+  concurrency = 3
+): Promise<Array<BatchSearchResult>> {
   const searches = queries.map(query => ({
     query,
-    ...options,
-    ...(directory && { onlyIn: directory })
+    options: directory ? { onlyIn: directory } : undefined
   }))
-
-  return mdfindBatch(searches)
+  return mdfindBatch(searches, concurrency)
 }

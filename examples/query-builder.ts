@@ -1,66 +1,66 @@
 import { QueryBuilder } from '../src/query-builder.js'
+import { homedir } from 'os'
+import { join } from 'path'
 
 async function main() {
   try {
-    // Example 1: Find recent high-res photos with GPS data
-    console.log('\n1. Finding recent high-res photos with GPS data:')
+    // Example 1: Find high-resolution photos taken with a specific camera
+    console.log('1. Finding high-resolution photos taken with a Canon camera:')
     const photoQuery = new QueryBuilder()
       .contentType('public.image')
-      .createdAfter(new Date('2023-01-01'))
-      .hasGPS()
+      .takenWith('Canon')
       .minImageDimensions(3000, 2000)
+      .inDirectory(join(homedir(), 'Pictures'))
 
     const photos = await photoQuery.execute()
     console.log(`Found ${photos.length} photos`)
     console.log(
       'First 3:',
-      photos.slice(0, 3).map(p => p.split('/').pop())
+      photos.slice(0, 3).map((p: string) => p.split('/').pop())
     )
 
-    // Example 2: Find high-quality audio files by a specific artist
+    // Example 2: Find high-quality audio files by an artist
     console.log('\n2. Finding high-quality audio files by an artist:')
     const audioQuery = new QueryBuilder()
       .contentType('public.audio')
-      .byAuthor('Radiohead')
+      .author('Radiohead')
       .minAudioQuality(44100, 320000)
 
     const audioFiles = await audioQuery.execute()
     console.log(`Found ${audioFiles.length} audio files`)
     console.log(
       'First 3:',
-      audioFiles.slice(0, 3).map(p => p.split('/').pop())
+      audioFiles.slice(0, 3).map((p: string) => p.split('/').pop())
     )
 
     // Example 3: Find PDF documents with specific keywords
-    console.log('\n3. Finding PDF documents with specific keywords:')
-    const pdfQuery = new QueryBuilder()
-      .contentType('com.adobe.pdf')
-      .useOperator('||')
+    console.log('\n3. Finding PDF documents about TypeScript:')
+    const docQuery = new QueryBuilder()
+      .isPDF()
       .hasKeyword('typescript')
-      .hasKeyword('javascript')
+      .inDirectory(join(homedir(), 'Documents'))
 
-    const pdfs = await pdfQuery.execute()
-    console.log(`Found ${pdfs.length} PDF files`)
+    const docs = await docQuery.execute()
+    console.log(`Found ${docs.length} documents`)
     console.log(
       'First 3:',
-      pdfs.slice(0, 3).map(p => p.split('/').pop())
+      docs.slice(0, 3).map((p: string) => p.split('/').pop())
     )
 
-    // Example 4: Find recently modified source code files
-    console.log('\n4. Finding recently modified source code files:')
+    // Example 4: Find recently modified code files
+    console.log('\n4. Finding recently modified code files:')
     const codeQuery = new QueryBuilder()
-      .useOperator('||')
-      .extension('ts')
-      .extension('js')
+      .isText()
       .modifiedAfter(new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
+      .extension('ts')
       .inDirectory(process.cwd()) // Only search in current project
-      .maxBuffer(1024 * 1024) // 1MB buffer
+      .maxBuffer(10 * 1024 * 1024) // 10MB buffer
 
     const codeFiles = await codeQuery.execute()
     console.log(`Found ${codeFiles.length} code files`)
     console.log(
       'First 3:',
-      codeFiles.slice(0, 3).map(p => p.split('/').pop())
+      codeFiles.slice(0, 3).map((p: string) => p.split('/').pop())
     )
   } catch (error) {
     console.error('Error:', error)
@@ -68,4 +68,7 @@ async function main() {
   }
 }
 
-main()
+main().catch(error => {
+  console.error('Unhandled error:', error)
+  process.exit(1)
+})

@@ -537,11 +537,13 @@ export const getAttributeDefinition = (name: string): SpotlightAttributeDefiniti
 }
 
 // Helper function to get attributes by category
-export const getAttributesByCategory = (category: SpotlightAttributeDefinition['category']) => {
+export const getAttributesByCategory = (
+  category: SpotlightAttributeDefinition['category']
+): SpotlightAttributeDefinition[] => {
   return SPOTLIGHT_ATTRIBUTES.filter(attr => attr.category === category)
 }
 
 // Helper function to get content type description
-export const getContentTypeDescription = (contentType: keyof typeof CONTENT_TYPES) => {
+export const getContentTypeDescription = (contentType: keyof typeof CONTENT_TYPES): string => {
   return CONTENT_TYPES[contentType]
 }

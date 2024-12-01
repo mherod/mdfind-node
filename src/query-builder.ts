@@ -44,7 +44,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  where(condition: string): this {
+  public where(condition: string): this {
     this.conditions.push(condition)
     return this
   }
@@ -71,7 +71,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  contentType(type: string): this {
+  public contentType(type: string): this {
     this.conditions.push(`kMDItemContentType == "${type}"`)
     return this
   }
@@ -90,7 +90,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  named(pattern: string): this {
+  public named(pattern: string): this {
     this.options.name = pattern
     return this
   }
@@ -109,7 +109,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  inDirectory(path: string): this {
+  public inDirectory(path: string): this {
     this.options.onlyIn = path
     return this
   }
@@ -127,7 +127,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  createdAfter(date: string | Date): this {
+  public createdAfter(date: string | Date): this {
     const timestamp = new Date(date).getTime() / 1000
     this.conditions.push(`kMDItemContentCreationDate > $time.iso(${timestamp})`)
     return this
@@ -146,7 +146,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  createdBefore(date: string | Date): this {
+  public createdBefore(date: string | Date): this {
     const timestamp = new Date(date).getTime() / 1000
     this.conditions.push(`kMDItemContentCreationDate < $time.iso(${timestamp})`)
     return this
@@ -165,7 +165,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  modifiedAfter(date: string | Date): this {
+  public modifiedAfter(date: string | Date): this {
     const timestamp = new Date(date).getTime() / 1000
     this.conditions.push(`kMDItemContentModificationDate > $time.iso(${timestamp})`)
     return this
@@ -184,7 +184,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  modifiedBefore(date: string | Date): this {
+  public modifiedBefore(date: string | Date): this {
     const timestamp = new Date(date).getTime() / 1000
     this.conditions.push(`kMDItemContentModificationDate < $time.iso(${timestamp})`)
     return this
@@ -203,7 +203,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  largerThan(bytes: number): this {
+  public largerThan(bytes: number): this {
     this.conditions.push(`kMDItemFSSize > ${bytes}`)
     return this
   }
@@ -221,7 +221,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  smallerThan(bytes: number): this {
+  public smallerThan(bytes: number): this {
     this.conditions.push(`kMDItemFSSize < ${bytes}`)
     return this
   }
@@ -239,7 +239,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  extension(ext: string): this {
+  public extension(ext: string): this {
     this.conditions.push(`kMDItemFSName ==[c] "*.${ext}"`)
     return this
   }
@@ -257,9 +257,28 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  author(name: string): this {
+  public author(name: string): this {
     this.conditions.push(`kMDItemAuthors == "${name}"`)
     return this
+  }
+
+  /**
+   * Filter by author or artist.
+   * Alias for author() method with more descriptive name for media files.
+   *
+   * @param {string} name - Author or artist name
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .contentType('public.audio')
+   *   .byAuthor('Radiohead')
+   *   .execute()
+   * ```
+   */
+  public byAuthor(name: string): this {
+    return this.author(name)
   }
 
   /**
@@ -275,7 +294,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  containing(text: string): this {
+  public containing(text: string): this {
     this.conditions.push(`kMDItemTextContent == "${text}"w`)
     return this
   }
@@ -293,7 +312,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  interpret(): this {
+  public interpret(): this {
     this.options.interpret = true
     return this
   }
@@ -311,7 +330,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  literal(): this {
+  public literal(): this {
     this.options.literal = true
     return this
   }
@@ -329,7 +348,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  count(): this {
+  public count(): this {
     this.options.count = true
     return this
   }
@@ -337,7 +356,7 @@ export class QueryBuilder {
   /**
    * Return specific metadata attributes.
    *
-   * @param {string} attribute - Spotlight metadata attribute
+   * @param {string} name - Spotlight metadata attribute
    * @returns {this} The builder instance for chaining
    *
    * @example
@@ -348,8 +367,8 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  attribute(attribute: string): this {
-    this.options.attr = attribute
+  public attribute(name: string): this {
+    this.options.attr = name
     return this
   }
 
@@ -366,7 +385,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  hasGPS(): this {
+  public hasGPS(): this {
     this.conditions.push('kMDItemLatitude != null && kMDItemLongitude != null')
     return this
   }
@@ -386,7 +405,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  minAudioQuality(sampleRate: number, bitRate: number): this {
+  public minAudioQuality(sampleRate: number, bitRate: number): this {
     this.conditions.push(
       `kMDItemAudioSampleRate >= ${sampleRate} && kMDItemAudioBitRate >= ${bitRate}`
     )
@@ -394,29 +413,10 @@ export class QueryBuilder {
   }
 
   /**
-   * Filter by author or artist.
-   * Alias for author() method with more descriptive name for media files.
-   *
-   * @param {string} name - Author or artist name
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .contentType('public.audio')
-   *   .byAuthor('Radiohead')
-   *   .execute()
-   * ```
-   */
-  byAuthor(name: string): this {
-    return this.author(name)
-  }
-
-  /**
    * Set the logical operator for multiple conditions.
    * Default is AND (&&). Use this to change to OR (||).
    *
-   * @param {string} operator - Logical operator ('&&' or '||')
+   * @param {string} op - Logical operator ('&&' or '||')
    * @returns {this} The builder instance for chaining
    *
    * @example
@@ -428,8 +428,8 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  useOperator(operator: '&&' | '||'): this {
-    this.operator = operator
+  public useOperator(op: '&&' | '||'): this {
+    this.operator = op
     return this
   }
 
@@ -446,7 +446,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  hasKeyword(keyword: string): this {
+  public hasKeyword(keyword: string): this {
     this.conditions.push(`(kMDItemTextContent == "${keyword}"w || kMDItemKeywords == "${keyword}")`)
     return this
   }
@@ -466,7 +466,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  minImageDimensions(width: number, height: number): this {
+  public minImageDimensions(width: number, height: number): this {
     this.conditions.push(`kMDItemPixelWidth >= ${width} && kMDItemPixelHeight >= ${height}`)
     return this
   }
@@ -483,7 +483,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  isApplication(): this {
+  public isApplication(): this {
     this.conditions.push('kMDItemContentType == "com.apple.application-bundle"')
     return this
   }
@@ -500,7 +500,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  isPreferencePane(): this {
+  public isPreferencePane(): this {
     this.conditions.push('kMDItemContentType == "com.apple.systempreference"')
     return this
   }
@@ -513,12 +513,12 @@ export class QueryBuilder {
    *
    * @example
    * ```typescript
-   * const redFiles = await new QueryBuilder()
+   * const files = await new QueryBuilder()
    *   .hasLabel(2) // Red label
    *   .execute()
    * ```
    */
-  hasLabel(label: number): this {
+  public hasLabel(label: number): this {
     this.conditions.push(`kMDItemFSLabel == ${label}`)
     return this
   }
@@ -530,12 +530,12 @@ export class QueryBuilder {
    *
    * @example
    * ```typescript
-   * const hiddenFiles = await new QueryBuilder()
+   * const files = await new QueryBuilder()
    *   .isInvisible()
    *   .execute()
    * ```
    */
-  isInvisible(): this {
+  public isInvisible(): this {
     this.conditions.push('kMDItemFSInvisible == 1')
     return this
   }
@@ -548,12 +548,12 @@ export class QueryBuilder {
    *
    * @example
    * ```typescript
-   * const myFiles = await new QueryBuilder()
+   * const files = await new QueryBuilder()
    *   .ownedBy(501) // Standard user ID
    *   .execute()
    * ```
    */
-  ownedBy(uid: number): this {
+  public ownedBy(uid: number): this {
     this.conditions.push(`kMDItemFSOwnerUserID == ${uid}`)
     return this
   }
@@ -571,7 +571,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  encodedBy(appName: string): this {
+  public encodedBy(appName: string): this {
     this.conditions.push(`kMDItemEncodingApplications == "${appName}"`)
     return this
   }
@@ -590,7 +590,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  inGenre(genre: string): this {
+  public inGenre(genre: string): this {
     this.conditions.push(`kMDItemMusicalGenre == "${genre}"`)
     return this
   }
@@ -609,7 +609,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  recordedIn(year: number): this {
+  public recordedIn(year: number): this {
     this.conditions.push(`kMDItemRecordingYear == ${year}`)
     return this
   }
@@ -628,7 +628,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  inAlbum(name: string): this {
+  public inAlbum(name: string): this {
     this.conditions.push(`kMDItemAlbum == "${name}"`)
     return this
   }
@@ -647,7 +647,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  byComposer(name: string): this {
+  public byComposer(name: string): this {
     this.conditions.push(`kMDItemComposer == "${name}"`)
     return this
   }
@@ -666,7 +666,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  takenWith(make: string): this {
+  public takenWith(make: string): this {
     this.conditions.push(`kMDItemAcquisitionMake == "${make}"`)
     return this
   }
@@ -685,7 +685,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  usingModel(model: string): this {
+  public usingModel(model: string): this {
     this.conditions.push(`kMDItemAcquisitionModel == "${model}"`)
     return this
   }
@@ -705,7 +705,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  withISO(min: number, max: number): this {
+  public withISO(min: number, max: number): this {
     this.conditions.push(`kMDItemISOSpeed >= ${min} && kMDItemISOSpeed <= ${max}`)
     return this
   }
@@ -725,7 +725,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  withFocalLength(min: number, max: number): this {
+  public withFocalLength(min: number, max: number): this {
     this.conditions.push(`kMDItemFocalLength >= ${min} && kMDItemFocalLength <= ${max}`)
     return this
   }
@@ -744,7 +744,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  inColorSpace(colorSpace: string): this {
+  public inColorSpace(colorSpace: string): this {
     this.conditions.push(`kMDItemColorSpace == "${colorSpace}"`)
     return this
   }
@@ -763,7 +763,7 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  withBitDepth(bits: number): this {
+  public withBitDepth(bits: number): this {
     this.conditions.push(`kMDItemBitsPerSample == ${bits}`)
     return this
   }
@@ -781,8 +781,161 @@ export class QueryBuilder {
    *   .execute()
    * ```
    */
-  maxBuffer(bytes: number): this {
+  public maxBuffer(bytes: number): this {
     this.options.maxBuffer = bytes
+    return this
+  }
+
+  /**
+   * Filter for text-based content.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isText()
+   *   .execute()
+   * ```
+   */
+  public isText(): this {
+    this.conditions.push('kMDItemContentTypeTree == "public.text"')
+    return this
+  }
+
+  /**
+   * Filter for composite content.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isComposite()
+   *   .execute()
+   * ```
+   */
+  public isComposite(): this {
+    this.conditions.push('kMDItemContentTypeTree == "public.composite-content"')
+    return this
+  }
+
+  /**
+   * Filter for audiovisual content.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isAudiovisual()
+   *   .execute()
+   * ```
+   */
+  public isAudiovisual(): this {
+    this.conditions.push('kMDItemContentTypeTree == "public.audiovisual-content"')
+    return this
+  }
+
+  /**
+   * Filter for bundle content.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isBundle()
+   *   .execute()
+   * ```
+   */
+  public isBundle(): this {
+    this.conditions.push('kMDItemContentTypeTree == "com.apple.bundle"')
+    return this
+  }
+
+  /**
+   * Filter for Markdown files.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isMarkdown()
+   *   .execute()
+   * ```
+   */
+  public isMarkdown(): this {
+    this.conditions.push('kMDItemContentType == "net.daringfireball.markdown"')
+    return this
+  }
+
+  /**
+   * Filter for property list files.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isPlist()
+   *   .execute()
+   * ```
+   */
+  public isPlist(): this {
+    this.conditions.push('kMDItemContentType == "com.apple.property-list"')
+    return this
+  }
+
+  /**
+   * Filter for PDF documents.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isPDF()
+   *   .execute()
+   * ```
+   */
+  public isPDF(): this {
+    this.conditions.push('kMDItemContentType == "com.adobe.pdf"')
+    return this
+  }
+
+  /**
+   * Filter for JSON files.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isJSON()
+   *   .execute()
+   * ```
+   */
+  public isJSON(): this {
+    this.conditions.push('kMDItemContentType == "public.json"')
+    return this
+  }
+
+  /**
+   * Filter for YAML files.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const files = await new QueryBuilder()
+   *   .isYAML()
+   *   .execute()
+   * ```
+   */
+  public isYAML(): this {
+    this.conditions.push('kMDItemContentType == "public.yaml"')
     return this
   }
 
@@ -798,11 +951,11 @@ export class QueryBuilder {
    *   .contentType('public.image')
    *   .hasGPS()
    *   .toString()
-   * // Returns: 'kMDItemContentType == "public.image" && kMDItemLatitude > 0'
+   * // Returns: 'kMDItemContentType == "public.image" && kMDItemLatitude != null && kMDItemLongitude != null'
    * ```
    */
-  toString(): string {
-    return this.conditions.join(` ${this.operator} `) || ''
+  public toString(): string {
+    return this.conditions.length ? this.conditions.join(` ${this.operator} `) : ''
   }
 
   /**
@@ -810,161 +963,10 @@ export class QueryBuilder {
    *
    * @returns {Promise<string[]>} Array of matching file paths
    */
-  async execute(): Promise<string[]> {
-    return mdfind(this.toString(), this.options)
-  }
-
-  /**
-   * Filter for any text-based content.
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const textFiles = await new QueryBuilder()
-   *   .isText()
-   *   .execute()
-   * ```
-   */
-  isText(): this {
-    this.conditions.push('kMDItemContentTypeTree == "public.text"')
-    return this
-  }
-
-  /**
-   * Filter for composite content (documents with multiple parts).
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const compositeFiles = await new QueryBuilder()
-   *   .isComposite()
-   *   .execute()
-   * ```
-   */
-  isComposite(): this {
-    this.conditions.push('kMDItemContentTypeTree == "public.composite-content"')
-    return this
-  }
-
-  /**
-   * Filter for audiovisual content.
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const mediaFiles = await new QueryBuilder()
-   *   .isAudiovisual()
-   *   .execute()
-   * ```
-   */
-  isAudiovisual(): this {
-    this.conditions.push('kMDItemContentTypeTree == "public.audiovisual-content"')
-    return this
-  }
-
-  /**
-   * Filter for bundles (apps, frameworks, plugins).
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const bundles = await new QueryBuilder()
-   *   .isBundle()
-   *   .execute()
-   * ```
-   */
-  isBundle(): this {
-    this.conditions.push('kMDItemContentTypeTree == "com.apple.bundle"')
-    return this
-  }
-
-  /**
-   * Filter for Markdown documents.
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const markdownFiles = await new QueryBuilder()
-   *   .isMarkdown()
-   *   .execute()
-   * ```
-   */
-  isMarkdown(): this {
-    this.conditions.push('kMDItemContentType == "net.daringfireball.markdown"')
-    return this
-  }
-
-  /**
-   * Filter for property list files.
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const plists = await new QueryBuilder()
-   *   .isPlist()
-   *   .execute()
-   * ```
-   */
-  isPlist(): this {
-    this.conditions.push('kMDItemContentType == "com.apple.property-list"')
-    return this
-  }
-
-  /**
-   * Filter for Adobe PDF documents.
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const pdfs = await new QueryBuilder()
-   *   .isPDF()
-   *   .execute()
-   * ```
-   */
-  isPDF(): this {
-    this.conditions.push('kMDItemContentType == "com.adobe.pdf"')
-    return this
-  }
-
-  /**
-   * Filter for JSON files.
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const jsonFiles = await new QueryBuilder()
-   *   .isJSON()
-   *   .execute()
-   * ```
-   */
-  isJSON(): this {
-    this.conditions.push('kMDItemContentType == "public.json"')
-    return this
-  }
-
-  /**
-   * Filter for YAML files.
-   *
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const yamlFiles = await new QueryBuilder()
-   *   .isYAML()
-   *   .execute()
-   * ```
-   */
-  isYAML(): this {
-    this.conditions.push('kMDItemContentType == "public.yaml"')
-    return this
+  public async execute(): Promise<string[]> {
+    const query = this.toString()
+    const options = this.options
+    return mdfind(query, options)
   }
 }
 

@@ -1,11 +1,11 @@
 import { execSync } from 'node:child_process'
 import {
   CONTENT_TYPES,
-  SPOTLIGHT_ATTRIBUTES,
-  type SpotlightAttributeDefinition,
   getAttributeDefinition,
   getAttributesByCategory,
-  getContentTypeDescription
+  getContentTypeDescription,
+  SPOTLIGHT_ATTRIBUTES,
+  type SpotlightAttributeDefinition
 } from './schemas/core/attributes.js'
 
 /**
@@ -57,7 +57,7 @@ export const discoverAttributes = (filePath: string): Record<string, string> => 
  * console.log(types['public.image']) // "Image files (JPEG, PNG, etc.)"
  * ```
  */
-export const getContentTypes = () => CONTENT_TYPES
+export const getContentTypes = (): typeof CONTENT_TYPES => CONTENT_TYPES
 
 /**
  * Get all known Spotlight attributes with their descriptions and metadata.
@@ -72,7 +72,7 @@ export const getContentTypes = () => CONTENT_TYPES
  * const imageAttrs = attrs.filter(a => a.category === 'image')
  * ```
  */
-export const getSpotlightAttributes = () => SPOTLIGHT_ATTRIBUTES
+export const getSpotlightAttributes = (): SpotlightAttributeDefinition[] => SPOTLIGHT_ATTRIBUTES
 
 /**
  * Search for attributes by name or description.
@@ -96,9 +96,4 @@ export const searchAttributes = (query: string): SpotlightAttributeDefinition[] 
   )
 }
 
-export {
-  type SpotlightAttributeDefinition,
-  getAttributeDefinition,
-  getAttributesByCategory,
-  getContentTypeDescription
-}
+export { getAttributeDefinition, getAttributesByCategory, getContentTypeDescription }

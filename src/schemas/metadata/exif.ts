@@ -64,36 +64,18 @@ import { z } from 'zod'
  * })
  * ```
  */
-export const ExifDataSchema = z
-  .object({
-    // Camera information
-    make: z.string().optional(),
-    model: z.string().optional(),
-    software: z.string().optional(),
-    lens: z.string().optional(),
-
-    // Timestamps
-    dateTime: z.date().optional(),
-    dateTimeOriginal: z.date().optional(),
-    dateTimeDigitized: z.date().optional(),
-
-    // Exposure settings
-    exposureTime: z.number().optional(),
-    fNumber: z.number().optional(),
-    isoSpeedRatings: z.number().optional(),
-    focalLength: z.number().optional(),
-    focalLengthIn35mmFilm: z.number().optional(),
-    flash: z.number().optional(),
-    meteringMode: z.number().optional(),
-    exposureProgram: z.number().optional(),
-    whiteBalance: z.number().optional(),
-
-    // GPS information
-    gpsLatitude: z.number().optional(),
-    gpsLongitude: z.number().optional(),
-    gpsAltitude: z.number().optional()
-  })
-  .strict()
+export const ExifDataSchema = z.object({
+  make: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  lens: z.string().nullable().optional(),
+  exposureTime: z.number().nullable().optional(),
+  fNumber: z.number().nullable().optional(),
+  isoSpeedRatings: z.number().nullable().optional(),
+  focalLength: z.number().nullable().optional(),
+  gpsLatitude: z.number().nullable().optional(),
+  gpsLongitude: z.number().nullable().optional(),
+  gpsAltitude: z.number().nullable().optional()
+})
 
 export type ExifData = z.infer<typeof ExifDataSchema>
 
@@ -104,12 +86,11 @@ export type ExifData = z.infer<typeof ExifDataSchema>
  * Mappings:
  * - kMDItemAcquisitionMake → make (camera manufacturer)
  * - kMDItemAcquisitionModel → model (camera model)
- * - kMDItemCreator → software (creation software)
+ * - kMDItemLensModel → lens (lens model)
  * - kMDItemExposureTimeSeconds → exposureTime (shutter speed)
  * - kMDItemFNumber → fNumber (aperture)
  * - kMDItemISOSpeed → isoSpeedRatings (ISO sensitivity)
  * - kMDItemFocalLength → focalLength (in mm)
- * - kMDItemFlashOnOff → flash (flash status)
  * - kMDItemLatitude → gpsLatitude (decimal degrees)
  * - kMDItemLongitude → gpsLongitude (decimal degrees)
  * - kMDItemAltitude → gpsAltitude (meters)
@@ -136,12 +117,11 @@ export type ExifData = z.infer<typeof ExifDataSchema>
 export const EXIF_ATTRIBUTE_MAP = {
   kMDItemAcquisitionMake: 'make',
   kMDItemAcquisitionModel: 'model',
-  kMDItemCreator: 'software',
+  kMDItemLensModel: 'lens',
   kMDItemExposureTimeSeconds: 'exposureTime',
   kMDItemFNumber: 'fNumber',
   kMDItemISOSpeed: 'isoSpeedRatings',
   kMDItemFocalLength: 'focalLength',
-  kMDItemFlashOnOff: 'flash',
   kMDItemLatitude: 'gpsLatitude',
   kMDItemLongitude: 'gpsLongitude',
   kMDItemAltitude: 'gpsAltitude'

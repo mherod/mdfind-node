@@ -57,32 +57,30 @@ import { z } from 'zod'
  * })
  * ```
  */
-export const XMPDataSchema = z
-  .object({
-    // Dublin Core elements
-    creator: z.string().optional(),
-    title: z.string().optional(),
-    description: z.string().optional(),
-    subject: z.array(z.string()).optional(),
-    rights: z.string().optional(),
-    copyrightNotice: z.string().optional(),
-
-    // XMP Basic
-    rating: z.number().optional(),
-    label: z.string().optional(),
-    createDate: z.date().optional(),
-    modifyDate: z.date().optional(),
-    metadataDate: z.date().optional(),
-    marked: z.boolean().optional(),
-
-    // Rights Management
-    webStatement: z.string().optional(),
-
-    // Color Management
-    colorMode: z.string().optional(),
-    iccProfile: z.string().optional()
-  })
-  .strict()
+export const XMPDataSchema = z.object({
+  title: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  creator: z.string().nullable().optional(),
+  subject: z.array(z.string()).nullable().optional(),
+  createDate: z
+    .string()
+    .transform(str => new Date(str))
+    .nullable()
+    .optional(),
+  modifyDate: z
+    .string()
+    .transform(str => new Date(str))
+    .nullable()
+    .optional(),
+  metadataDate: z
+    .string()
+    .transform(str => new Date(str))
+    .nullable()
+    .optional(),
+  copyrightNotice: z.string().nullable().optional(),
+  rights: z.string().nullable().optional(),
+  webStatement: z.string().nullable().optional()
+})
 
 export type XMPData = z.infer<typeof XMPDataSchema>
 
@@ -128,20 +126,13 @@ export type XMPData = z.infer<typeof XMPDataSchema>
  * ```
  */
 export const XMP_ATTRIBUTE_MAP = {
-  kMDItemAuthors: 'creator',
   kMDItemTitle: 'title',
   kMDItemDescription: 'description',
   kMDItemKeywords: 'subject',
-  kMDItemRating: 'rating',
-  kMDItemFinderComment: 'description',
   kMDItemContentCreationDate: 'createDate',
   kMDItemContentModificationDate: 'modifyDate',
   kMDItemCopyright: 'copyrightNotice',
-  kMDItemLabel: 'label',
   kMDItemRights: 'rights',
-  kMDItemColorSpace: 'colorMode',
-  kMDItemICCProfile: 'iccProfile',
   kMDItemWebStatement: 'webStatement',
-  kMDItemMetadataModificationDate: 'metadataDate',
-  kMDItemMarked: 'marked'
+  kMDItemMetadataModificationDate: 'metadataDate'
 } as const satisfies Record<string, keyof XMPData>

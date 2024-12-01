@@ -1,8 +1,8 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import {
-  MdlsOptionsSchema,
   type MdlsOptions,
+  MdlsOptionsSchema,
   type MetadataResult,
   MetadataResultSchema
 } from './schemas/index.js'
@@ -124,11 +124,11 @@ const parseStandardOutput = (output: string): MetadataResult => {
 export const getMetadata = async (
   filePath: string,
   options: MdlsOptions = {}
-): Promise<MetadataResult | string[]> => {
+): Promise<MetadataResult> => {
   const validatedOptions = MdlsOptionsSchema.parse(options)
   const args: string[] = []
 
-  if (validatedOptions.attributes?.length) {
+  if (validatedOptions.attributes.length > 0) {
     for (const attr of validatedOptions.attributes) {
       args.push('-name', attr)
     }

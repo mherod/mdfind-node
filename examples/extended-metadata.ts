@@ -1,103 +1,59 @@
-import { getExtendedMetadata, getExifData, getXMPData, getBasicMetadata } from '../src/metadata.js'
-import { homedir } from 'os'
-import { join } from 'path'
+import { getBasicMetadata, getExifData, getExtendedMetadata, getXMPData } from '../src/metadata.js'
 
 async function main() {
   try {
-    // Example 1: Get all metadata for an image
-    console.log('\n1. Getting all metadata for a recent photo:')
-    const photoPath = join(homedir(), 'Pictures', 'Photos Library.photoslibrary')
+    // Example 1: Getting all metadata for a file
+    console.log('\n1. Getting all metadata for a file:')
     try {
-      const metadata = await getExtendedMetadata(photoPath)
-      console.log('\nBasic Info:')
-      console.log(JSON.stringify(metadata.basic, null, 2))
-      console.log('\nEXIF Data:')
-      console.log(JSON.stringify(metadata.exif, null, 2))
-      console.log('\nXMP Data:')
-      console.log(JSON.stringify(metadata.xmp, null, 2))
+      const metadata = await getExtendedMetadata('package.json')
+      console.log('All metadata:', metadata)
     } catch (error) {
-      if (error instanceof Error) {
-        console.log('No Photos Library found:', error.message)
-      }
+      console.error('Failed to get metadata:', error)
     }
 
-    // Example 2: Get EXIF data for a photo
-    console.log('\n2. Getting EXIF data for a photo:')
+    // Example 2: Getting EXIF data for an image
+    console.log('\n2. Getting EXIF data for an image:')
     try {
-      const exifData = await getExifData(photoPath)
-      console.log('\nCamera Info:')
-      console.log('- Make:', exifData.make)
-      console.log('- Model:', exifData.model)
-      console.log('- Lens:', exifData.lens)
-      console.log('\nSettings:')
-      console.log('- Exposure Time:', exifData.exposureTime)
-      console.log('- F-Number:', exifData.fNumber)
-      console.log('- ISO:', exifData.isoSpeedRatings)
-      console.log('- Focal Length:', exifData.focalLength)
-      if (exifData.gpsLatitude) {
-        console.log('\nLocation:')
-        console.log('- Latitude:', exifData.gpsLatitude)
-        console.log('- Longitude:', exifData.gpsLongitude)
-        console.log('- Altitude:', exifData.gpsAltitude)
-      }
+      const exif = await getExifData('README.md')
+      console.log('EXIF data:', exif)
     } catch (error) {
-      if (error instanceof Error) {
-        console.log('No Photos Library found:', error.message)
-      }
+      console.error('Failed to get EXIF data:', error)
     }
 
-    // Example 3: Get XMP data for a document
-    console.log('\n3. Getting XMP data for a PDF:')
-    const pdfPath = join(homedir(), 'Library', 'Preferences', 'com.apple.LaunchServices.plist')
+    // Example 3: Getting XMP data for a file
+    console.log('\n3. Getting XMP data for a file:')
     try {
-      const xmpData = await getXMPData(pdfPath)
-      console.log('\nDocument Info:')
-      console.log('- Title:', xmpData.title)
-      console.log('- Creator:', xmpData.creator)
-      console.log('- Description:', xmpData.description)
-      console.log('- Keywords:', xmpData.subject?.join(', '))
-      console.log('- Created:', xmpData.createDate)
-      console.log('- Modified:', xmpData.modifyDate)
-      console.log('\nRights:')
-      console.log('- Copyright:', xmpData.copyrightNotice)
-      console.log('- Rights:', xmpData.rights)
-      console.log('- Web Statement:', xmpData.webStatement)
+      const xmp = await getXMPData('tsconfig.json')
+      console.log('XMP data:', xmp)
     } catch (error) {
-      if (error instanceof Error) {
-        console.log('No LaunchServices.plist found:', error.message)
-      }
+      console.error('Failed to get XMP data:', error)
     }
 
-    // Example 4: Get basic metadata for multiple files
-    console.log('\n4. Getting basic metadata for system files:')
-    const files = [
-      join(homedir(), 'Library', 'Preferences', 'com.apple.LaunchServices.plist'),
-      join(homedir(), 'Library', 'Preferences', 'com.apple.finder.plist'),
-      join(homedir(), 'Library', 'Preferences', 'com.apple.dock.plist')
-    ]
+    // Example 4: Getting basic metadata for files
+    console.log('\n4. Getting basic metadata for files:')
+    const files = ['package.json', 'README.md', 'tsconfig.json']
 
     for (const file of files) {
       try {
-        const basicData = await getBasicMetadata(file)
-        console.log(`\n${basicData.name}:`)
-        console.log('- Type:', basicData.contentType)
-        console.log('- Kind:', basicData.kind)
-        console.log('- Size:', basicData.size)
-        console.log('- Created:', basicData.created)
-        console.log('- Modified:', basicData.modified)
-        console.log('- Last Opened:', basicData.lastOpened)
+        console.log(`\n${file}:`)
+        const info = await getBasicMetadata(file)
+        console.log('- Type:', info.contentType)
+        console.log('- Kind:', info.kind)
+        console.log('- Size:', info.size)
+        console.log('- Created:', info.created?.toLocaleString())
+        console.log('- Modified:', info.modified?.toLocaleString())
+        console.log('- Last Opened:', info.lastOpened?.toLocaleString())
       } catch (error) {
-        if (error instanceof Error) {
-          console.log(`\nFile not found: ${file}`)
-        }
+        console.error(`Failed to get metadata for ${file}:`, error)
       }
     }
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error:', error.message)
-      process.exit(1)
-    }
+    console.error('Error:', error)
+    process.exit(1)
   }
 }
 
-main()
+main().catch(error => {
+  console.error('Unhandled error:', error)
+  process.exit(1)
+})

@@ -1,83 +1,67 @@
 import { getMetadata } from '../src/mdls.js'
-import { getIndexingStatus, listIndexContents, MdutilError } from '../src/mdutil.js'
-import { homedir } from 'os'
-import { join } from 'path'
+import { getIndexingStatus, listIndexContents } from '../src/mdutil.js'
 
 async function main() {
   try {
-    // Get metadata for a file
-    const filePath = join(homedir(), 'Downloads', 'example.pdf')
+    // Example 1: Getting metadata for a file
     console.log('\n1. Getting metadata for a file:')
     try {
-      const metadata = await getMetadata(filePath)
-      console.log('Metadata:', JSON.stringify(metadata, null, 2))
+      const metadata = await getMetadata('package.json')
+      console.log('Metadata:', metadata)
     } catch (error) {
-      if (error instanceof Error) {
-        console.log('No example.pdf found in Downloads:', error.message)
-      }
+      console.error('Failed to get metadata:', error)
     }
 
-    // Get specific attributes
+    // Example 2: Getting specific attributes
     console.log('\n2. Getting specific attributes:')
     try {
-      const attributes = await getMetadata(filePath, {
+      const attributes = await getMetadata('package.json', {
         attributes: ['kMDItemContentType', 'kMDItemContentCreationDate']
       })
-      console.log('Specific attributes:', attributes)
+      console.log('Attributes:', attributes)
     } catch (error) {
-      if (error instanceof Error) {
-        console.log('No example.pdf found in Downloads:', error.message)
-      }
+      console.error('Failed to get attributes:', error)
     }
 
-    // Get raw output
+    // Example 3: Getting raw metadata output
     console.log('\n3. Getting raw metadata output:')
     try {
-      const rawData = await getMetadata(filePath, {
+      const rawMetadata = await getMetadata('package.json', {
         raw: true,
         nullMarker: 'NULL'
       })
-      console.log('Raw data:', rawData)
+      console.log('Raw metadata:', rawMetadata)
     } catch (error) {
-      if (error instanceof Error) {
-        console.log('No example.pdf found in Downloads:', error.message)
-      }
+      console.error('Failed to get raw metadata:', error)
     }
 
-    // Check indexing status
+    // Example 4: Checking Spotlight indexing status
     console.log('\n4. Checking Spotlight indexing status:')
     try {
-      const homeStatus = await getIndexingStatus(homedir(), { verbose: true })
+      const status = await getIndexingStatus(process.cwd())
       console.log('Home directory indexing:')
-      console.log('- Enabled:', homeStatus.enabled)
-      console.log('- Last scan:', homeStatus.scanBaseTime?.toLocaleString())
-      if (homeStatus.reasoning) {
-        console.log('- Reasoning:', homeStatus.reasoning)
-      }
+      console.log('- Enabled:', status.enabled)
+      console.log('- Last scan:', status.scanBaseTime?.toLocaleString())
+      console.log('- Reasoning:', status.reasoning)
     } catch (error) {
-      if (error instanceof Error) {
-        console.error('Failed to get indexing status:', error.message)
-      }
+      console.error('Failed to get indexing status:', error)
     }
 
-    // List index contents
+    // Example 5: Listing Spotlight index contents
     console.log('\n5. Listing Spotlight index contents:')
     try {
-      const indexContents = await listIndexContents(homedir())
-      console.log('Index contents:', indexContents)
+      const contents = await listIndexContents(process.cwd())
+      console.log('Index contents:', contents)
     } catch (error) {
-      if (error instanceof MdutilError && error.requiresRoot) {
-        console.log('Note: This operation requires root privileges')
-      } else if (error instanceof Error) {
-        console.error('Failed to list index contents:', error.message)
-      }
+      console.error('Failed to list index contents:', error)
     }
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error:', error.message)
-      process.exit(1)
-    }
+    console.error('Error:', error)
+    process.exit(1)
   }
 }
 
-main()
+main().catch(error => {
+  console.error('Unhandled error:', error)
+  process.exit(1)
+})

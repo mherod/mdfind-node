@@ -1,19 +1,17 @@
 import { z } from 'zod'
-import { homedir } from 'os'
 
 /**
  * Schema for basic file metadata.
  * Provides essential file information commonly used in file operations.
  *
  * Properties:
- * - path: Full path to the file (expands ~ to home directory)
  * - name: Display name or filename
+ * - contentType: UTI content type (e.g., 'public.image')
+ * - kind: Localized file type description
  * - size: File size in bytes (0 if unavailable)
  * - created: Creation timestamp (null if unavailable)
  * - modified: Last modification timestamp (null if unavailable)
  * - lastOpened: Last access timestamp (null if unavailable)
- * - contentType: UTI content type (e.g., 'public.image')
- * - kind: Localized file type description
  *
  * Features:
  * - Automatic home directory expansion in paths
@@ -25,13 +23,13 @@ import { homedir } from 'os'
  * Basic file metadata:
  * ```typescript
  * const metadata = BasicMetadataSchema.parse({
- *   path: '~/Documents/example.pdf',
  *   name: 'example.pdf',
+ *   contentType: 'com.adobe.pdf',
+ *   kind: 'PDF Document',
  *   size: 1024,
  *   created: new Date('2024-01-01'),
  *   modified: new Date('2024-01-02'),
- *   contentType: 'com.adobe.pdf',
- *   kind: 'PDF Document'
+ *   lastOpened: new Date('2024-01-03')
  * })
  * ```
  *
@@ -39,8 +37,8 @@ import { homedir } from 'os'
  * Minimal metadata:
  * ```typescript
  * const metadata = BasicMetadataSchema.parse({
- *   path: '/tmp/file.txt',
- *   name: 'file.txt'
+ *   name: 'file.txt',
+ *   contentType: 'public.text'
  * })
  * ```
  *
@@ -48,25 +46,36 @@ import { homedir } from 'os'
  * Handling invalid data:
  * ```typescript
  * const metadata = BasicMetadataSchema.parse({
- *   path: '~/file.txt',  // Will be expanded
  *   name: 'file.txt',
- *   size: 'invalid',     // Will be 0
- *   created: 'invalid'   // Will be null
+ *   contentType: 'public.text',
+ *   size: 'invalid',
+ *   created: 'invalid',
+ *   modified: 'invalid',
+ *   lastOpened: 'invalid'
  * })
  * ```
  */
-export const BasicMetadataSchema = z
-  .object({
-    path: z.string().transform(p => p.replace(/^~/, homedir())),
-    name: z.string(),
-    size: z.coerce.number().catch(0).optional(),
-    created: z.coerce.date().nullable().optional(),
-    modified: z.coerce.date().nullable().optional(),
-    lastOpened: z.coerce.date().nullable().optional(),
-    contentType: z.string().optional(),
-    kind: z.string().optional()
-  })
-  .strict()
+export const BasicMetadataSchema = z.object({
+  name: z.string(),
+  contentType: z.string().nullable().optional(),
+  kind: z.string().nullable().optional(),
+  size: z.number().optional(),
+  created: z
+    .string()
+    .transform(str => new Date(str))
+    .nullable()
+    .optional(),
+  modified: z
+    .string()
+    .transform(str => new Date(str))
+    .nullable()
+    .optional(),
+  lastOpened: z
+    .string()
+    .transform(str => new Date(str))
+    .nullable()
+    .optional()
+})
 
 export type BasicMetadata = z.infer<typeof BasicMetadataSchema>
 
