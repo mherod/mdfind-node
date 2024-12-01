@@ -11,8 +11,8 @@ A powerful Node.js wrapper for macOS's Spotlight search (`mdfind`), bringing sys
 ## ✨ Features
 
 - 🚀 **Full Spotlight Integration** - Access all macOS Spotlight search capabilities
+- 🔄 **Smart Query Builder** - Type-safe, fluent API for building complex searches
 - 🔄 **Live Search Support** - Real-time file monitoring and updates
-- 🎯 **Smart Queries** - Fluent query builder for complex searches
 - 📦 **Batch Operations** - Run multiple searches in parallel or sequence
 - 📝 **Rich Metadata** - Access EXIF, XMP, and system metadata
 - 💪 **Type-Safe** - Full TypeScript support with detailed types
@@ -39,42 +39,85 @@ bun add mdfind-node
 ## 🚀 Quick Start
 
 ```typescript
-import { mdfind } from 'mdfind-node'
-
-// Basic search
-const results = await mdfind('query')
-
-// Advanced search with options
-const photos = await mdfind('kMDItemContentType == "public.image"', {
-  onlyIn: '~/Pictures',
-  live: true, // Keep watching for changes
-  attr: 'kMDItemPixelHeight' // Get image heights
-})
-
-// Use the query builder for complex searches
 import { QueryBuilder } from 'mdfind-node'
 
-const query = new QueryBuilder()
-  .isText() // Find text-based content
-  .extension('md') // Markdown files
-  .modifiedAfter('2024-01-01') // Modified this year
-  .inDirectory('~/Documents') // In Documents folder
+// Find recent Markdown files
+const docs = await new QueryBuilder()
+  .isMarkdown()
+  .modifiedAfter(new Date('2024-01-01'))
+  .inDirectory('~/Documents')
+  .execute()
+
+// Find high-resolution photos
+const photos = await new QueryBuilder()
+  .contentType('public.image')
+  .minImageDimensions(3000, 2000)
+  .hasGPS()
+  .inDirectory('~/Pictures')
+  .execute()
+
+// Find large video files
+const videos = await new QueryBuilder()
+  .isMovie()
+  .largerThan(100 * 1024 * 1024) // > 100MB
+  .inDirectory('~/Movies')
   .execute()
 ```
 
 ## 🎯 Key Features
 
+### 🔍 Smart Query Builder
+
+The QueryBuilder provides a fluent, type-safe API for building complex searches:
+
+```typescript
+import { QueryBuilder } from 'mdfind-node'
+
+// Find documents by author
+const authorDocs = await new QueryBuilder()
+  .isPDF()
+  .author('John Doe')
+  .createdAfter(new Date('2024-01-01'))
+  .inDirectory('~/Documents')
+  .execute()
+
+// Find photos from a specific camera
+const cameraPhotos = await new QueryBuilder()
+  .contentType('public.image')
+  .takenWith('iPhone 14 Pro')
+  .hasGPS()
+  .inDirectory('~/Pictures')
+  .execute()
+
+// Find code files with specific content
+const codeFiles = await new QueryBuilder()
+  .isSourceCode()
+  .extension('ts')
+  .contains('QueryBuilder')
+  .modifiedAfter(new Date('2024-01-01'))
+  .execute()
+
+// Combine conditions with OR
+const mediaFiles = await new QueryBuilder()
+  .useOperator('||')
+  .extension('mp4')
+  .extension('mov')
+  .extension('avi')
+  .largerThan(50 * 1024 * 1024)
+  .execute()
+```
+
 ### 🔄 Live Search
 
 ```typescript
-import { mdfindLive } from 'mdfind-node'
+import { QueryBuilder, mdfindLive } from 'mdfind-node'
+
+// Create a query to watch for new PDFs
+const query = new QueryBuilder().isPDF().inDirectory('~/Downloads').toString()
 
 const search = mdfindLive(
-  'kMDItemContentType == "public.pdf"',
-  {
-    onlyIn: '~/Downloads',
-    reprint: true
-  },
+  query,
+  { reprint: true },
   {
     onResult: paths => console.log('New matches:', paths),
     onError: error => console.error('Search error:', error),
@@ -86,11 +129,20 @@ const search = mdfindLive(
 ### 📦 Batch Operations
 
 ```typescript
-import { mdfindBatch } from 'mdfind-node'
+import { QueryBuilder, mdfindBatch } from 'mdfind-node'
 
+// Create multiple queries
+const imageQuery = new QueryBuilder()
+  .contentType('public.image')
+  .minImageDimensions(1920, 1080)
+  .toString()
+
+const docQuery = new QueryBuilder().isPDF().modifiedAfter(new Date('2024-01-01')).toString()
+
+// Run them in parallel
 const results = await mdfindBatch([
-  { query: 'image', onlyIn: '~/Pictures' },
-  { query: 'document', onlyIn: '~/Documents' }
+  { query: imageQuery, onlyIn: '~/Pictures' },
+  { query: docQuery, onlyIn: '~/Documents' }
 ])
 ```
 
@@ -100,26 +152,42 @@ const results = await mdfindBatch([
 import { getExtendedMetadata } from 'mdfind-node'
 
 const metadata = await getExtendedMetadata('photo.jpg')
+console.log('Basic:', metadata.basic)
 console.log('EXIF:', metadata.exif)
 console.log('XMP:', metadata.xmp)
 ```
 
 ### 🎯 Specialized Search Methods
 
+The QueryBuilder includes specialized methods for common file types:
+
 ```typescript
 import { QueryBuilder } from 'mdfind-node'
 
-// Find text-based files
-const textFiles = await new QueryBuilder().isText().execute()
+// Find text files
+const textFiles = await new QueryBuilder().isText().modifiedAfter(new Date('2024-01-01')).execute()
 
-// Find audiovisual content
-const mediaFiles = await new QueryBuilder().isAudiovisual().execute()
+// Find media files
+const mediaFiles = await new QueryBuilder()
+  .isAudiovisual()
+  .largerThan(10 * 1024 * 1024)
+  .execute()
 
-// Find application bundles
+// Find applications
 const apps = await new QueryBuilder().isBundle().inDirectory('/Applications').execute()
 
-// Find Markdown files
-const docs = await new QueryBuilder().isMarkdown().execute()
+// Find configuration files
+const configs = await new QueryBuilder().isPlist().inDirectory('~/Library/Preferences').execute()
+
+// Find development files
+const devFiles = await new QueryBuilder()
+  .useOperator('||')
+  .isSourceCode()
+  .isMarkdown()
+  .isJSON()
+  .isYAML()
+  .inDirectory(process.cwd())
+  .execute()
 ```
 
 ## 🔍 Attribute Discovery
@@ -230,14 +298,18 @@ pnpm dev
 # Production build
 pnpm build
 
+# Run tests
+pnpm test
+
 # Run examples
-pnpm example           # Basic example
-pnpm example:live      # Live search example
-pnpm example:query     # Query builder example
-pnpm example:metadata  # Metadata example
-pnpm example:batch     # Batch operations example
-pnpm example:discover  # Attribute discovery example
-pnpm example:types     # Content type example
+pnpm examples:basic
+pnpm examples:advanced
+pnpm examples:query-builder
+pnpm examples:live-search
+pnpm examples:metadata
+pnpm examples:batch
+pnpm examples:discover
+pnpm examples:content-types
 ```
 
 ## 📄 License
