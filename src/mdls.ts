@@ -1,11 +1,19 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
-import { MdlsOptionsSchema, MetadataResultSchema, type MdlsOptions, type MetadataResult } from './schemas.js'
+import {
+  MdlsOptionsSchema,
+  MetadataResultSchema,
+  type MdlsOptions,
+  type MetadataResult
+} from './schemas.js'
 
 const execAsync = promisify(exec)
 
 const parseRawOutput = (output: string, nullMarker: string): string[] => {
-  return output.split('\0').map(value => value === nullMarker ? null : value).filter(Boolean) as string[]
+  return output
+    .split('\0')
+    .map(value => (value === nullMarker ? null : value))
+    .filter(Boolean) as string[]
 }
 
 const parseStandardOutput = (output: string): MetadataResult => {
@@ -25,7 +33,10 @@ const parseStandardOutput = (output: string): MetadataResult => {
 
     // Parse arrays
     if (cleanValue.startsWith('(') && cleanValue.endsWith(')')) {
-      value = cleanValue.slice(1, -1).split(',').map(v => v.trim().replace(/^"(.*)"$/, '$1'))
+      value = cleanValue
+        .slice(1, -1)
+        .split(',')
+        .map(v => v.trim().replace(/^"(.*)"$/, '$1'))
     }
     // Parse dates
     else if (cleanValue.includes('0000-00-00')) {
@@ -50,7 +61,10 @@ const parseStandardOutput = (output: string): MetadataResult => {
   return MetadataResultSchema.parse(result)
 }
 
-export const getMetadata = async (filePath: string, options: MdlsOptions = {}): Promise<MetadataResult | string[]> => {
+export const getMetadata = async (
+  filePath: string,
+  options: MdlsOptions = {}
+): Promise<MetadataResult | string[]> => {
   const validatedOptions = MdlsOptionsSchema.parse(options)
   const args: string[] = []
 

@@ -138,8 +138,9 @@ export const getExtendedMetadata = async (
     // Map Spotlight attributes to EXIF data
     const exifData: Partial<ExifData> = {}
     for (const [spotlightAttr, exifAttr] of Object.entries(EXIF_ATTRIBUTE_MAP)) {
-      if (spotlightData[spotlightAttr] !== undefined) {
-        exifData[exifAttr as keyof ExifData] = spotlightData[spotlightAttr]
+      const value = spotlightData[spotlightAttr]
+      if (value !== undefined && value !== null) {
+        exifData[exifAttr as keyof ExifData] = value
       }
     }
     result.exif = ExifDataSchema.parse(exifData)
@@ -149,8 +150,9 @@ export const getExtendedMetadata = async (
     // Map Spotlight attributes to XMP data
     const xmpData: Partial<XMPData> = {}
     for (const [spotlightAttr, xmpAttr] of Object.entries(XMP_ATTRIBUTE_MAP)) {
-      if (spotlightData[spotlightAttr] !== undefined) {
-        xmpData[xmpAttr as keyof XMPData] = spotlightData[spotlightAttr]
+      const value = spotlightData[spotlightAttr]
+      if (value !== undefined && value !== null) {
+        xmpData[xmpAttr as keyof XMPData] = value
       }
     }
     result.xmp = XMPDataSchema.parse(xmpData)

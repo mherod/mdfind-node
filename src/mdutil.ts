@@ -1,11 +1,19 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
-import { IndexStatusSchema, MdutilOptionsSchema, type IndexStatus, type MdutilOptions } from './schemas.js'
+import {
+  IndexStatusSchema,
+  MdutilOptionsSchema,
+  type IndexStatus,
+  type MdutilOptions
+} from './schemas.js'
 
 const execAsync = promisify(exec)
 
 export class MdutilError extends Error {
-  constructor(message: string, public readonly requiresRoot: boolean = false) {
+  constructor(
+    message: string,
+    public readonly requiresRoot: boolean = false
+  ) {
     super(message)
     this.name = 'MdutilError'
   }
@@ -29,7 +37,10 @@ const parseIndexingStatus = (output: string): IndexStatus => {
 /**
  * Get the indexing status of a volume
  */
-export const getIndexingStatus = async (volumePath: string, options: MdutilOptions = {}): Promise<IndexStatus> => {
+export const getIndexingStatus = async (
+  volumePath: string,
+  options: MdutilOptions = {}
+): Promise<IndexStatus> => {
   const validatedOptions = MdutilOptionsSchema.parse(options)
   const args = ['-s']
   if (validatedOptions.verbose) args.push('-v')
@@ -73,10 +84,7 @@ export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> =>
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(
-        `Failed to erase and rebuild index: ${error.message}`,
-        requiresRoot
-      )
+      throw new MdutilError(`Failed to erase and rebuild index: ${error.message}`, requiresRoot)
     }
     throw error
   }
@@ -92,10 +100,7 @@ export const listIndexContents = async (volumePath: string): Promise<string> => 
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Must be root')
-      throw new MdutilError(
-        `Failed to list index contents: ${error.message}`,
-        requiresRoot
-      )
+      throw new MdutilError(`Failed to list index contents: ${error.message}`, requiresRoot)
     }
     throw error
   }
@@ -110,10 +115,7 @@ export const flushCaches = async (volumePath: string): Promise<void> => {
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(
-        `Failed to flush caches: ${error.message}`,
-        requiresRoot
-      )
+      throw new MdutilError(`Failed to flush caches: ${error.message}`, requiresRoot)
     }
     throw error
   }
@@ -128,10 +130,7 @@ export const removeIndex = async (volumePath: string): Promise<void> => {
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(
-        `Failed to remove index: ${error.message}`,
-        requiresRoot
-      )
+      throw new MdutilError(`Failed to remove index: ${error.message}`, requiresRoot)
     }
     throw error
   }

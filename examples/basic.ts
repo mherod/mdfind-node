@@ -29,13 +29,15 @@ async function main() {
 
     // Get author metadata from documents
     console.log('\n4. Finding recent documents with author metadata:')
-    const authorDocs = await mdfind('kMDItemAuthors == * && kMDItemContentType == "com.adobe.pdf"', {
-      attr: 'kMDItemAuthors',
-      onlyIn: '~/Documents'
-    })
+    const authorDocs = await mdfind(
+      'kMDItemAuthors == * && kMDItemContentType == "com.adobe.pdf"',
+      {
+        attr: 'kMDItemAuthors',
+        onlyIn: '~/Documents'
+      }
+    )
     console.log(`Found ${authorDocs.length} documents with authors`)
     console.log('First 3:', authorDocs.slice(0, 3))
-
   } catch (error) {
     if (error instanceof MdfindError) {
       console.error('Search failed:', error.message)

@@ -10,31 +10,35 @@ console.log('Press Ctrl+C to stop\n')
 
 // First get initial results
 const query = '(kMDItemContentType == "com.adobe.pdf" || kMDItemDisplayName == "*.pdf")'
-const search = mdfindLive(query, {
-  onlyIn: DOWNLOADS,
-  reprint: true
-}, {
-  onResult: (paths) => {
-    console.log('\nUpdate detected!')
-    if (paths.length > 0) {
-      console.log('\nFound PDF files:')
-      paths.forEach(path => {
-        const filename = path.split('/').pop()
-        console.log(`- ${filename}`)
-      })
-    } else {
-      console.log('No PDF files found')
+const search = mdfindLive(
+  query,
+  {
+    onlyIn: DOWNLOADS,
+    reprint: true
+  },
+  {
+    onResult: paths => {
+      console.log('\nUpdate detected!')
+      if (paths.length > 0) {
+        console.log('\nFound PDF files:')
+        paths.forEach(path => {
+          const filename = path.split('/').pop()
+          console.log(`- ${filename}`)
+        })
+      } else {
+        console.log('No PDF files found')
+      }
+      console.log('\nWaiting for changes...')
+    },
+    onError: (error: MdfindError) => {
+      console.error('\nSearch error:', error.message)
+      console.error('stderr:', error.stderr)
+    },
+    onEnd: () => {
+      console.log('\nSearch ended')
     }
-    console.log('\nWaiting for changes...')
-  },
-  onError: (error: MdfindError) => {
-    console.error('\nSearch error:', error.message)
-    console.error('stderr:', error.stderr)
-  },
-  onEnd: () => {
-    console.log('\nSearch ended')
   }
-})
+)
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {

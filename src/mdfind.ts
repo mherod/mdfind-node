@@ -14,7 +14,10 @@ const execAsync = promisify(exec)
 export class MdfindError extends Error {
   public readonly name = 'MdfindError' as const
 
-  constructor(message: string, public readonly stderr: string) {
+  constructor(
+    message: string,
+    public readonly stderr: string
+  ) {
     super(message)
   }
 }
@@ -87,7 +90,9 @@ export const mdfind = async (query: string, options: MdfindOptions = {}): Promis
     return stdout.trim().split(separator).filter(Boolean)
   } catch (error) {
     if (error instanceof Error) {
-      throw new MdfindError(error.message, (error as any).stderr || '')
+      // Define a type for the error object that includes stderr
+      type ExecError = Error & { stderr?: string }
+      throw new MdfindError(error.message, (error as ExecError).stderr || '')
     }
     throw error
   }
@@ -152,10 +157,11 @@ export const mdfindLive = (
     // Keep the last incomplete line in the buffer
     buffer = lines.pop() || ''
 
-    const paths = lines.filter(line =>
-      line.trim() &&
-      !line.includes('[UserQueryParser]') &&
-      !line.includes('[Type ctrl-C to exit]')
+    const paths = lines.filter(
+      line =>
+        line.trim() &&
+        !line.includes('[UserQueryParser]') &&
+        !line.includes('[Type ctrl-C to exit]')
     )
 
     if (paths.length > 0 || isFirstChunk) {
@@ -175,11 +181,14 @@ export const mdfindLive = (
     // Process any remaining data in the buffer
     if (buffer.length > 0) {
       const separator = validatedOptions.nullSeparator ? '\0' : '\n'
-      const paths = buffer.split(separator).filter(line =>
-        line.trim() &&
-        !line.includes('[UserQueryParser]') &&
-        !line.includes('[Type ctrl-C to exit]')
-      )
+      const paths = buffer
+        .split(separator)
+        .filter(
+          line =>
+            line.trim() &&
+            !line.includes('[UserQueryParser]') &&
+            !line.includes('[Type ctrl-C to exit]')
+        )
       if (paths.length > 0) {
         validatedEvents.onResult(paths)
       }
