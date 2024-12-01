@@ -1,7 +1,8 @@
-import { mdfind, type MdfindOptions } from './mdfind.js'
+import { mdfind } from './mdfind.js'
+import { SpotlightAttributeSchema, type MdfindOptions } from './schemas.js'
 import { z } from 'zod'
 
-export interface BatchSearchOptions extends MdfindOptions {
+export interface BatchSearchOptions extends Omit<MdfindOptions, 'live' | 'reprint'> {
   query: string
 }
 
@@ -10,17 +11,15 @@ export const BatchSearchOptionsSchema = z
     query: z.string(),
     onlyIn: z.string().optional(),
     name: z.string().optional(),
-    live: z.literal(false).optional(), // Live search not supported in batch mode
     count: z.boolean().optional(),
-    attr: z.string().optional(),
+    attr: SpotlightAttributeSchema.optional(),
     smartFolder: z.string().optional(),
     nullSeparator: z.boolean().optional(),
     maxBuffer: z.number().optional(),
-    reprint: z.literal(false).optional(), // Reprint not supported in batch mode
     literal: z.boolean().optional(),
     interpret: z.boolean().optional()
   })
-  .strict()
+  .passthrough()
 
 export interface BatchSearchResult {
   query: string
@@ -37,9 +36,10 @@ export const mdfindBatch = async (searches: BatchSearchOptions[]): Promise<Batch
 
   const searchPromises = validatedSearches.map(async (search): Promise<BatchSearchResult> => {
     try {
-      const results = await mdfind(search.query, search)
+      const { query, ...options } = search
+      const results = await mdfind(query, options)
       return {
-        query: search.query,
+        query,
         options: search,
         results
       }
@@ -67,9 +67,10 @@ export const mdfindSequential = async (
 
   for (const search of validatedSearches) {
     try {
-      const searchResults = await mdfind(search.query, search)
+      const { query, ...options } = search
+      const searchResults = await mdfind(query, options)
       results.push({
-        query: search.query,
+        query,
         options: search,
         results: searchResults
       })
