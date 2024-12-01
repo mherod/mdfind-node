@@ -23,7 +23,12 @@
     "example": "tsx examples/basic.ts",
     "example:live": "tsx examples/live-search.ts",
     "example:advanced": "tsx examples/advanced.ts",
-    "example:metadata": "tsx examples/metadata.ts"
+    "example:metadata": "tsx examples/metadata.ts",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"examples/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"examples/**/*.ts\"",
+    "prepare": "husky"
   },
   "keywords": [
     "mdfind",
@@ -34,6 +39,14 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "@typescript-eslint/parser": "^8.16.0",
+    "eslint": "^9.16.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.4.1",
     "ts-node": "^10.9.2",
     "tsup": "^8.3.5",
     "tsx": "^4.6.2",
@@ -41,5 +54,11 @@
   },
   "dependencies": {
     "zod": "^3.23.8"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }
