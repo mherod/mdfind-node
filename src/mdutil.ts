@@ -187,6 +187,12 @@ export const setIndexing = async (volumePath: string, enable: boolean): Promise<
     await execAsync(`mdutil -i ${enable ? 'on' : 'off'} "${volumePath}"`)
   } catch (error) {
     if (error instanceof Error) {
+      if (error.message.includes('invalid operation')) {
+        throw new MdutilError('Operation not permitted on this path', error.message, false)
+      }
+      if (error.message.includes('unknown indexing state')) {
+        throw new MdutilError('Path is not eligible for Spotlight indexing', error.message, false)
+      }
       const requiresRoot = error.message.includes('Operation not permitted')
       throw new MdutilError(
         `Failed to ${enable ? 'enable' : 'disable'} indexing: ${error.message}`,
@@ -215,6 +221,9 @@ export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> =>
     await execAsync(`mdutil -E "${volumePath}"`)
   } catch (error) {
     if (error instanceof Error) {
+      if (error.message.includes('invalid operation')) {
+        throw new MdutilError('Operation not permitted on this path', error.message, false)
+      }
       const requiresRoot = error.message.includes('Operation not permitted')
       throw new MdutilError(
         `Failed to erase and rebuild index: ${error.message}`,

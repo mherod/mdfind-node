@@ -28,6 +28,8 @@ const parseRawMetadata = (
     const value = values[i]
     const attr = attributes[i]
 
+    if (!value || !attr) continue
+
     if (value === '(null)') {
       result[attr] = null
     } else if (value.startsWith('(') && value.endsWith(')')) {
@@ -35,7 +37,50 @@ const parseRawMetadata = (
       const content = value.slice(1, -1).trim()
       result[attr] = content ? content.split(',').map(s => s.trim().replace(/^"(.*)"$/, '$1')) : []
     } else {
-      result[attr] = value
+      // Try to coerce types based on attribute name
+      const cleanValue = value.replace(/^"(.*)"$/, '$1')
+
+      // Handle dates
+      if (attr.includes('Date') || attr.includes('date')) {
+        try {
+          const date = new Date(cleanValue)
+          if (!isNaN(date.getTime())) {
+            result[attr] = date
+            continue
+          }
+        } catch {
+          // Fall through to other type checks
+        }
+      }
+
+      // Handle numbers
+      if (
+        attr.includes('Size') ||
+        attr.includes('Count') ||
+        attr.includes('Number') ||
+        attr.includes('BitRate') ||
+        attr.includes('Duration') ||
+        attr.includes('Height') ||
+        attr.includes('Width') ||
+        attr.includes('Length') ||
+        attr.includes('Speed') ||
+        attr.includes('Time')
+      ) {
+        const num = Number(cleanValue)
+        if (!isNaN(num)) {
+          result[attr] = num
+          continue
+        }
+      }
+
+      // Handle booleans
+      if (cleanValue === 'true' || cleanValue === 'false') {
+        result[attr] = cleanValue === 'true'
+        continue
+      }
+
+      // Keep as string
+      result[attr] = cleanValue
     }
   }
 
@@ -71,8 +116,50 @@ const parseFormattedMetadata = (output: string): MetadataResult => {
         ? content.split(',').map(s => s.trim().replace(/^"(.*)"$/, '$1'))
         : []
     } else {
-      // Remove surrounding quotes if present
-      result[cleanKey] = cleanValue.replace(/^"(.*)"$/, '$1')
+      // Try to coerce types based on attribute name
+      const unquotedValue = cleanValue.replace(/^"(.*)"$/, '$1')
+
+      // Handle dates
+      if (cleanKey.includes('Date') || cleanKey.includes('date')) {
+        try {
+          const date = new Date(unquotedValue)
+          if (!isNaN(date.getTime())) {
+            result[cleanKey] = date
+            continue
+          }
+        } catch {
+          // Fall through to other type checks
+        }
+      }
+
+      // Handle numbers
+      if (
+        cleanKey.includes('Size') ||
+        cleanKey.includes('Count') ||
+        cleanKey.includes('Number') ||
+        cleanKey.includes('BitRate') ||
+        cleanKey.includes('Duration') ||
+        cleanKey.includes('Height') ||
+        cleanKey.includes('Width') ||
+        cleanKey.includes('Length') ||
+        cleanKey.includes('Speed') ||
+        cleanKey.includes('Time')
+      ) {
+        const num = Number(unquotedValue)
+        if (!isNaN(num)) {
+          result[cleanKey] = num
+          continue
+        }
+      }
+
+      // Handle booleans
+      if (unquotedValue === 'true' || unquotedValue === 'false') {
+        result[cleanKey] = unquotedValue === 'true'
+        continue
+      }
+
+      // Keep as string
+      result[cleanKey] = unquotedValue
     }
   }
 
