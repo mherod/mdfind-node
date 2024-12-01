@@ -157,4 +157,4 @@ export const MdutilOptionsSchema = z
 
 export type MdfindOptions = z.input<typeof MdfindOptionsSchema>
 export type MdlsOptions = z.input<typeof MdlsOptionsSchema>
-export type MdutilOptions = z.infer<typeof MdutilOptionsSchema>
+export type MdutilOptions = z.input<typeof MdutilOptionsSchema>
