@@ -959,14 +959,12 @@ export class QueryBuilder {
   }
 
   /**
-   * Execute the query and return matching file paths.
-   *
-   * @returns {Promise<string[]>} Array of matching file paths
+   * Execute the search with the current conditions and options.
+   * @returns {Promise<string[]>} Array of file paths matching the query
    */
   public async execute(): Promise<string[]> {
     const query = this.toString()
-    const options = this.options
-    return mdfind(query, options)
+    return mdfind(query, this.options)
   }
 }
 

@@ -5,7 +5,7 @@ import {
   searchAttributes
 } from '../src/discover.js'
 
-async function main() {
+function main(): Promise<void> {
   try {
     // Example 1: List all known content types
     console.log('\n1. Available content types:')
@@ -66,13 +66,13 @@ async function main() {
         })
       }
     }
+    return Promise.resolve()
   } catch (error) {
-    console.error('Error:', error)
-    process.exit(1)
+    return Promise.reject(error)
   }
 }
 
-void main().catch(error => {
+void main().catch((error: unknown) => {
   console.error('Unhandled error:', error)
   process.exit(1)
 })

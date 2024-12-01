@@ -15,11 +15,23 @@ const execAsync = promisify(exec)
  *
  * @internal
  */
-const parseRawOutput = (output: string, nullMarker: string): string[] => {
-  return output
-    .split('\0')
-    .map(value => (value === nullMarker ? null : value))
-    .filter(Boolean) as string[]
+const parseRawOutput = (
+  stdout: string,
+  nullMarker: string
+): { [k: string]: string | number | boolean | Date | string[] | null } => {
+  const lines = stdout.split('\n').filter(Boolean)
+  const result: { [k: string]: string | number | boolean | Date | string[] | null } = {}
+
+  for (const line of lines) {
+    const [key, value] = line.split('=').map(s => s.trim())
+    if (value === nullMarker) {
+      result[key] = null
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result
 }
 
 /**

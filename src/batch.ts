@@ -138,13 +138,14 @@ export async function mdfindBatch(
           const searchResults = await mdfind(query, options)
           results[index] = {
             query,
-            options: options ?? {},
+            options: { query, ...options },
             results: searchResults
           }
         } catch (error) {
           results[index] = {
             query,
-            options: options ?? {},
+            options: { query, ...options },
+            results: [],
             error: error instanceof Error ? error : new Error(String(error))
           }
         }
@@ -288,7 +289,7 @@ export const mdfindSequential = async (
  * )
  * ```
  */
-export async function mdfindMultiDirectory(
+export function mdfindMultiDirectory(
   query: string,
   directories: string[],
   concurrency = 3
@@ -306,7 +307,7 @@ export async function mdfindMultiDirectory(
  * Each query runs independently and concurrently.
  *
  * @param {string[]} queries - Array of Spotlight queries to execute
- * @param {string} [directory] - Optional directory to limit the search to
+ * @param {string} directory - Directory to limit the search to
  * @param {Omit<MdfindOptions, 'onlyIn'>} [options] - Additional search options
  * @returns {Promise<BatchSearchResult[]>} Results for each query
  * @throws {Error} If validation fails for the search options
@@ -342,14 +343,15 @@ export async function mdfindMultiDirectory(
  * )
  * ```
  */
-export async function mdfindMultiQuery(
+export function mdfindMultiQuery(
   queries: string[],
-  directory?: string,
+  directory: string,
+  options: Omit<MdfindOptions, 'onlyIn'> = {},
   concurrency = 3
 ): Promise<Array<BatchSearchResult>> {
   const searches = queries.map(query => ({
     query,
-    options: directory ? { onlyIn: directory } : undefined
+    options: { ...options, onlyIn: directory }
   }))
   return mdfindBatch(searches, concurrency)
 }
