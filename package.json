@@ -41,7 +41,9 @@
     "example:discover": "tsx examples/discover.ts",
     "example:advanced-search": "tsx examples/advanced-search.ts",
     "example:content-types": "tsx examples/content-types.ts",
-    "example:mdutil": "tsx examples/mdutil-status.ts"
+    "example:mdutil": "tsx examples/mdutil-status.ts",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch"
   },
   "keywords": [
     "macos",
@@ -90,6 +92,7 @@
     "*.ts": [
       "eslint --fix",
       "prettier --write",
+      "tsc --noEmit",
       "vitest related --run"
     ]
   }
