@@ -5,7 +5,7 @@ import {
   MdutilOptionsSchema,
   type IndexStatus,
   type MdutilOptions
-} from './schemas.js'
+} from './schemas/index.js'
 
 const execAsync = promisify(exec)
 

@@ -1,5 +1,5 @@
 import { mdfind } from './mdfind.js'
-import { SpotlightAttributeSchema, type MdfindOptions } from './schemas.js'
+import { SpotlightAttributeSchema, type MdfindOptions } from './schemas/index.js'
 import { z } from 'zod'
 
 export interface BatchSearchOptions extends Omit<MdfindOptions, 'live' | 'reprint'> {

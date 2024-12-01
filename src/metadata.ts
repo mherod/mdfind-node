@@ -1,104 +1,16 @@
 import { getMetadata } from './mdls.js'
-import { z } from 'zod'
-import { type MetadataResult, MetadataResultSchema } from './schemas.js'
-
-// Extended metadata schemas
-export const ExifDataSchema = z
-  .object({
-    make: z.string().optional(),
-    model: z.string().optional(),
-    software: z.string().optional(),
-    dateTime: z.date().optional(),
-    dateTimeOriginal: z.date().optional(),
-    dateTimeDigitized: z.date().optional(),
-    exposureTime: z.number().optional(),
-    fNumber: z.number().optional(),
-    isoSpeedRatings: z.number().optional(),
-    focalLength: z.number().optional(),
-    focalLengthIn35mmFilm: z.number().optional(),
-    flash: z.number().optional(),
-    meteringMode: z.number().optional(),
-    exposureProgram: z.number().optional(),
-    whiteBalance: z.number().optional(),
-    gpsLatitude: z.number().optional(),
-    gpsLongitude: z.number().optional(),
-    gpsAltitude: z.number().optional(),
-    lens: z.string().optional()
-  })
-  .strict()
-
-export const XMPDataSchema = z
-  .object({
-    creator: z.string().optional(),
-    title: z.string().optional(),
-    description: z.string().optional(),
-    subject: z.array(z.string()).optional(),
-    rating: z.number().optional(),
-    label: z.string().optional(),
-    createDate: z.date().optional(),
-    modifyDate: z.date().optional(),
-    metadataDate: z.date().optional(),
-    rights: z.string().optional(),
-    copyrightNotice: z.string().optional(),
-    marked: z.boolean().optional(),
-    webStatement: z.string().optional(),
-    colorMode: z.string().optional(),
-    iccProfile: z.string().optional()
-  })
-  .strict()
-
-export const ExtendedMetadataSchema = z
-  .object({
-    basic: z.record(z.string(), z.unknown()),
-    exif: ExifDataSchema,
-    xmp: XMPDataSchema,
-    spotlight: MetadataResultSchema
-  })
-  .strict()
-
-export type ExifData = z.infer<typeof ExifDataSchema>
-export type XMPData = z.infer<typeof XMPDataSchema>
-export type ExtendedMetadata = z.infer<typeof ExtendedMetadataSchema>
-
-export interface ExtendedMetadataOptions {
-  includeBasic?: boolean
-  includeExif?: boolean
-  includeXMP?: boolean
-  spotlightAttributes?: string[]
-}
-
-const EXIF_ATTRIBUTE_MAP = {
-  kMDItemAcquisitionMake: 'make',
-  kMDItemAcquisitionModel: 'model',
-  kMDItemCreator: 'software',
-  kMDItemExposureTimeSeconds: 'exposureTime',
-  kMDItemFNumber: 'fNumber',
-  kMDItemISOSpeed: 'isoSpeedRatings',
-  kMDItemFocalLength: 'focalLength',
-  kMDItemFlashOnOff: 'flash',
-  kMDItemLatitude: 'gpsLatitude',
-  kMDItemLongitude: 'gpsLongitude',
-  kMDItemAltitude: 'gpsAltitude'
-} as const
-
-const XMP_ATTRIBUTE_MAP = {
-  kMDItemAuthors: 'creator',
-  kMDItemTitle: 'title',
-  kMDItemDescription: 'description',
-  kMDItemKeywords: 'subject',
-  kMDItemRating: 'rating',
-  kMDItemFinderComment: 'description',
-  kMDItemContentCreationDate: 'createDate',
-  kMDItemContentModificationDate: 'modifyDate',
-  kMDItemCopyright: 'copyrightNotice',
-  kMDItemLabel: 'label',
-  kMDItemRights: 'rights',
-  kMDItemColorSpace: 'colorMode',
-  kMDItemICCProfile: 'iccProfile',
-  kMDItemWebStatement: 'webStatement',
-  kMDItemMetadataModificationDate: 'metadataDate',
-  kMDItemMarked: 'marked'
-} as const satisfies Record<string, keyof XMPData>
+import {
+  type MetadataResult,
+  type ExtendedMetadata,
+  type ExtendedMetadataOptions,
+  ExtendedMetadataSchema,
+  BasicMetadataSchema,
+  ExifDataSchema,
+  XMPDataSchema
+} from './schemas/index.js'
+import { BASIC_ATTRIBUTE_MAP } from './schemas/metadata/basic.js'
+import { EXIF_ATTRIBUTE_MAP } from './schemas/metadata/exif.js'
+import { XMP_ATTRIBUTE_MAP } from './schemas/metadata/xmp.js'
 
 /**
  * Get extended metadata for a file
@@ -121,77 +33,38 @@ export const getExtendedMetadata = async (
 
   // Initialize result object
   const result: ExtendedMetadata = {
-    basic: {},
-    exif: {},
-    xmp: {},
+    basic: BasicMetadataSchema.parse({
+      path: filePath,
+      name:
+        spotlightData.kMDItemDisplayName ||
+        spotlightData.kMDItemFSName ||
+        filePath.split('/').pop() ||
+        ''
+    }),
+    exif: ExifDataSchema.parse({}),
+    xmp: XMPDataSchema.parse({}),
     spotlight: spotlightData
   }
 
   if (includeBasic) {
-    // Extract basic file info
-    result.basic = {
-      path: filePath,
-      name: spotlightData.kMDItemDisplayName || spotlightData.kMDItemFSName,
-      size: spotlightData.kMDItemFSSize,
-      created: spotlightData.kMDItemContentCreationDate,
-      modified: spotlightData.kMDItemContentModificationDate,
-      lastOpened: spotlightData.kMDItemLastUsedDate,
-      contentType: spotlightData.kMDItemContentType,
-      kind: spotlightData.kMDItemKind
+    // Map Spotlight attributes to basic metadata
+    const basicData: Record<string, unknown> = { path: filePath }
+    for (const [spotlightAttr, basicAttr] of Object.entries(BASIC_ATTRIBUTE_MAP)) {
+      const value = spotlightData[spotlightAttr]
+      if (value !== undefined && value !== null) {
+        basicData[basicAttr] = value
+      }
     }
+    result.basic = BasicMetadataSchema.parse(basicData)
   }
 
   if (includeExif) {
     // Map Spotlight attributes to EXIF data
-    const exifData: Partial<ExifData> = {}
+    const exifData: Record<string, unknown> = {}
     for (const [spotlightAttr, exifAttr] of Object.entries(EXIF_ATTRIBUTE_MAP)) {
       const value = spotlightData[spotlightAttr]
       if (value !== undefined && value !== null) {
-        // Type-safe property assignment
-        if (['make', 'model', 'software', 'lens'].includes(exifAttr) && typeof value === 'string') {
-          exifData[exifAttr as keyof Pick<ExifData, 'make' | 'model' | 'software' | 'lens'>] = value
-        } else if (
-          ['dateTime', 'dateTimeOriginal', 'dateTimeDigitized'].includes(exifAttr) &&
-          value instanceof Date
-        ) {
-          exifData[
-            exifAttr as keyof Pick<ExifData, 'dateTime' | 'dateTimeOriginal' | 'dateTimeDigitized'>
-          ] = value
-        } else if (
-          [
-            'exposureTime',
-            'fNumber',
-            'isoSpeedRatings',
-            'focalLength',
-            'focalLengthIn35mmFilm',
-            'flash',
-            'meteringMode',
-            'exposureProgram',
-            'whiteBalance',
-            'gpsLatitude',
-            'gpsLongitude',
-            'gpsAltitude'
-          ].includes(exifAttr) &&
-          typeof value === 'number'
-        ) {
-          exifData[
-            exifAttr as keyof Pick<
-              ExifData,
-              | 'exposureTime'
-              | 'fNumber'
-              | 'isoSpeedRatings'
-              | 'focalLength'
-              | 'focalLengthIn35mmFilm'
-              | 'flash'
-              | 'meteringMode'
-              | 'exposureProgram'
-              | 'whiteBalance'
-              | 'gpsLatitude'
-              | 'gpsLongitude'
-              | 'gpsAltitude'
-            >
-          ] = value
-        }
+        exifData[exifAttr] = value
       }
     }
     result.exif = ExifDataSchema.parse(exifData)
@@ -199,51 +72,14 @@ export const getExtendedMetadata = async (
 
   if (includeXMP) {
     // Map Spotlight attributes to XMP data
-    const xmpData: Partial<XMPData> = {}
+    const xmpData: Record<string, unknown> = {}
     for (const [spotlightAttr, xmpAttr] of Object.entries(XMP_ATTRIBUTE_MAP)) {
       const value = spotlightData[spotlightAttr]
       if (value !== undefined && value !== null) {
-        // Type-safe property assignment
-        if (
-          [
-            'creator',
-            'title',
-            'description',
-            'label',
-            'rights',
-            'copyrightNotice',
-            'colorMode',
-            'iccProfile',
-            'webStatement'
-          ].includes(xmpAttr) &&
-          typeof value === 'string'
-        ) {
-          xmpData[
-            xmpAttr as keyof Pick<
-              XMPData,
-              | 'creator'
-              | 'title'
-              | 'description'
-              | 'label'
-              | 'rights'
-              | 'copyrightNotice'
-              | 'colorMode'
-              | 'iccProfile'
-              | 'webStatement'
-            >
-          ] = value
-        } else if (xmpAttr === 'subject' && Array.isArray(value)) {
-          xmpData.subject = value.filter((v): v is string => typeof v === 'string')
-        } else if (xmpAttr === 'rating' && typeof value === 'number') {
-          xmpData.rating = value
-        } else if (
-          ['createDate', 'modifyDate', 'metadataDate'].includes(xmpAttr) &&
-          value instanceof Date
-        ) {
-          xmpData[xmpAttr as keyof Pick<XMPData, 'createDate' | 'modifyDate' | 'metadataDate'>] =
-            value
-        } else if (xmpAttr === 'marked' && typeof value === 'boolean') {
-          xmpData.marked = value
+        if (xmpAttr === 'subject' && Array.isArray(value)) {
+          xmpData[xmpAttr] = value.filter((v): v is string => typeof v === 'string')
+        } else {
+          xmpData[xmpAttr] = value
         }
       }
     }
@@ -256,7 +92,7 @@ export const getExtendedMetadata = async (
 /**
  * Get EXIF data for a file
  */
-export const getExifData = async (filePath: string): Promise<ExifData> => {
+export const getExifData = async (filePath: string) => {
   const metadata = await getExtendedMetadata(filePath, {
     includeBasic: false,
     includeExif: true,
@@ -268,7 +104,7 @@ export const getExifData = async (filePath: string): Promise<ExifData> => {
 /**
  * Get XMP data for a file
  */
-export const getXMPData = async (filePath: string): Promise<XMPData> => {
+export const getXMPData = async (filePath: string) => {
   const metadata = await getExtendedMetadata(filePath, {
     includeBasic: false,
     includeExif: false,
@@ -280,7 +116,7 @@ export const getXMPData = async (filePath: string): Promise<XMPData> => {
 /**
  * Get basic file metadata
  */
-export const getBasicMetadata = async (filePath: string): Promise<Record<string, unknown>> => {
+export const getBasicMetadata = async (filePath: string) => {
   const metadata = await getExtendedMetadata(filePath, {
     includeBasic: true,
     includeExif: false,
@@ -288,3 +124,5 @@ export const getBasicMetadata = async (filePath: string): Promise<Record<string,
   })
   return metadata.basic
 }
+
+export { type ExtendedMetadataOptions }

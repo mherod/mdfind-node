@@ -21,4 +21,4 @@ export {
   type ExifData,
   type XMPData,
   type ExtendedMetadata
-} from './schemas.js'
+} from './schemas/index.js'

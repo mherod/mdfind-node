@@ -2,12 +2,9 @@ import { exec, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { ChildProcess } from 'node:child_process'
 import { homedir } from 'os'
-import {
-  LiveSearchEventsSchema,
-  MdfindOptionsSchema,
-  type LiveSearchEvents,
-  type MdfindOptions
-} from './schemas.js'
+import { MdfindOptionsSchema } from './schemas/options/index.js'
+import { LiveSearchEventsSchema, type LiveSearchEvents } from './schemas/core/events.js'
+import type { MdfindOptions } from './schemas/index.js'
 
 const execAsync = promisify(exec)
 

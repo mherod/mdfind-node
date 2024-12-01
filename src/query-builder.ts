@@ -1,4 +1,4 @@
-import { SpotlightContentTypeSchema, type SpotlightContentType } from './schemas.js'
+import { SpotlightContentTypeSchema, type SpotlightContentType } from './schemas/core/spotlight.js'
 
 type ComparisonOperator = '==' | '!=' | '>' | '>=' | '<' | '<='
 type LogicalOperator = '&&' | '||'
