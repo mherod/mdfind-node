@@ -3,13 +3,7 @@ export * from './mdls.js'
 export * from './mdutil.js'
 export * from './query-builder.js'
 export * from './batch.js'
-export {
-  getExtendedMetadata,
-  getExifData,
-  getXMPData,
-  getBasicMetadata,
-  type ExtendedMetadataOptions
-} from './metadata.js'
+export { getExtendedMetadata, getExifData, getXMPData, getBasicMetadata } from './metadata.js'
 export {
   type SpotlightContentType,
   type SpotlightAttribute,
@@ -31,6 +25,5 @@ export {
   searchAttributes,
   getAttributesByCategory,
   getAttributeDefinition,
-  getContentTypeDescription,
-  type SpotlightAttributeDefinition
+  getContentTypeDescription
 } from './discover.js'

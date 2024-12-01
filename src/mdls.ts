@@ -15,19 +15,17 @@ const execAsync = promisify(exec)
  *
  * @internal
  */
-const parseRawOutput = (
-  stdout: string,
-  nullMarker: string
-): { [k: string]: string | number | boolean | Date | string[] | null } => {
-  const lines = stdout.split('\n').filter(Boolean)
-  const result: { [k: string]: string | number | boolean | Date | string[] | null } = {}
+const parseRawMetadata = (output: string, nullMarker: string): Record<string, string | null> => {
+  const result: Record<string, string | null> = {}
+  const lines = output.split('\n')
 
   for (const line of lines) {
-    const [key, value] = line.split('=').map(s => s.trim())
-    if (value === nullMarker) {
-      result[key] = null
-    } else {
-      result[key] = value
+    const parts = line.split('=').map(s => s.trim())
+    const key = parts[0]
+    const value = parts[1]
+
+    if (key && value !== undefined) {
+      result[key] = value === nullMarker ? null : value
     }
   }
 
@@ -40,41 +38,45 @@ const parseRawOutput = (
  *
  * @internal
  */
-const parseStandardOutput = (output: string): MetadataResult => {
-  const result: Record<string, unknown> = {}
+const parseFormattedMetadata = (output: string): MetadataResult => {
+  const result: Record<string, string | number | boolean | Date | string[] | null> = {}
   const lines = output.split('\n')
 
   for (const line of lines) {
-    const match = line.match(/^([^=]+)\s+=\s(.+)$/)
+    const match = line.match(/^([^=]+)=\s*(.*)$/)
     if (!match) continue
 
     const [, key, rawValue] = match
+    if (!key || rawValue === undefined) continue
+
     const cleanKey = key.trim()
-    let value: unknown = null
+    let value: string | number | boolean | Date | string[] | null = null
 
     // Remove surrounding quotes if present
     const cleanValue = rawValue.trim().replace(/^"(.*)"$/, '$1')
 
     // Parse arrays
     if (cleanValue.startsWith('(') && cleanValue.endsWith(')')) {
-      value = cleanValue
-        .slice(1, -1)
-        .split(',')
-        .map(v => v.trim().replace(/^"(.*)"$/, '$1'))
+      const arrayContent = cleanValue.slice(1, -1).trim()
+      value = arrayContent ? arrayContent.split(',').map(s => s.trim()) : []
     }
     // Parse dates
-    else if (cleanValue.includes('0000-00-00')) {
-      value = new Date(cleanValue)
+    else if (cleanValue.includes('date') || cleanValue.includes('Date')) {
+      try {
+        value = new Date(cleanValue)
+      } catch {
+        value = null
+      }
     }
     // Parse numbers
     else if (/^-?\d+(\.\d+)?$/.test(cleanValue)) {
       value = Number(cleanValue)
     }
     // Parse booleans
-    else if (cleanValue === '0' || cleanValue === '1') {
-      value = cleanValue === '1'
+    else if (cleanValue === 'true' || cleanValue === 'false') {
+      value = cleanValue === 'true'
     }
-    // Everything else is a string
+    // Keep as string
     else {
       value = cleanValue
     }
@@ -159,10 +161,10 @@ export const getMetadata = async (
     const { stdout } = await execAsync(`mdls ${args.map(arg => `"${arg}"`).join(' ')}`)
 
     if (validatedOptions.raw) {
-      return parseRawOutput(stdout, validatedOptions.nullMarker || '(null)')
+      return parseRawMetadata(stdout, validatedOptions.nullMarker || '(null)')
     }
 
-    return parseStandardOutput(stdout)
+    return parseFormattedMetadata(stdout)
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to get metadata: ${error.message}`)

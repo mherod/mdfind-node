@@ -30,7 +30,7 @@ export const discoverAttributes = (filePath: string): Record<string, string> => 
 
     output.split('\n').forEach(line => {
       const match = line.match(/^\s*([kMD]\w+)\s*=\s*(.+)$/)
-      if (match) {
+      if (match?.[1] && match[2]) {
         const [, name, description] = match
         attributes[name] = description.trim()
       }

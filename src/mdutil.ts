@@ -1,6 +1,8 @@
 import { exec } from 'node:child_process'
+import { resolve } from 'node:path'
 import { promisify } from 'node:util'
 import {
+  type IndexingState,
   type IndexStatus,
   IndexStatusSchema,
   type MdutilOptions,
@@ -16,18 +18,6 @@ const execAsync = promisify(exec)
  * - message: Error description
  * - stderr: Raw error output from the command
  * - requiresRoot: Whether the operation needs root access
- *
- * @example
- * ```typescript
- * try {
- *   await eraseAndRebuildIndex('/Volumes/Data')
- * } catch (error) {
- *   if (error instanceof MdutilError) {
- *     console.error('Failed:', error.message)
- *     console.error('Details:', error.stderr)
- *   }
- * }
- * ```
  */
 export class MdutilError extends Error {
   public readonly name = 'MdutilError' as const
@@ -41,16 +31,49 @@ export class MdutilError extends Error {
   }
 }
 
-const parseIndexingStatus = (output: string): IndexStatus => {
-  const enabled = output.includes('Indexing enabled.')
+/**
+ * Parse the raw output from mdutil -s command
+ */
+const parseIndexingStatus = (output: string, volumePath: string): IndexStatus => {
+  // Normalize the volume path
+  const resolvedPath = resolve(volumePath)
+  const isSystemVolume = resolvedPath.startsWith('/System/Volumes/')
+
+  // Determine the indexing state
+  let state: IndexingState
+  if (output.includes('Indexing enabled')) {
+    state = 'enabled'
+  } else if (output.includes('Indexing disabled')) {
+    state = 'disabled'
+  } else if (output.includes('Error: unknown indexing state')) {
+    state = 'unknown'
+  } else {
+    state = 'error'
+  }
+
+  // Extract scan base time if present
   const scanBaseMatch = output.match(/Scan base time: ([^(]+)/)
-  const reasoningMatch = output.match(/reasoning: '([^']+)'/)
+  let scanBaseTime: Date | null = null
+  if (scanBaseMatch?.[1]) {
+    try {
+      scanBaseTime = new Date(scanBaseMatch[1])
+    } catch {
+      // Invalid date format, leave as null
+    }
+  }
+
+  // Extract reasoning if present
+  const reasoningMatch = output.match(/reasoning: '([^']*)'/)
+  const reasoning = reasoningMatch?.[1] ?? null
 
   const result = {
-    enabled,
+    state,
+    enabled: state === 'enabled',
     status: output.trim(),
-    ...(scanBaseMatch && { scanBaseTime: new Date(scanBaseMatch[1]) }),
-    ...(reasoningMatch && { reasoning: reasoningMatch[1] })
+    scanBaseTime,
+    reasoning,
+    volumePath: resolvedPath,
+    isSystemVolume
   }
 
   return IndexStatusSchema.parse(result)
@@ -63,39 +86,25 @@ const parseIndexingStatus = (output: string): IndexStatus => {
  * @param {string} volumePath - Path to check indexing status for
  * @param {MdutilOptions} [options] - Configuration options:
  *   - verbose: Include additional status details
+ *   - resolveRealPath: Resolve symlinks to real paths (default: true)
+ *   - excludeSystemVolumes: Filter out system volumes (default: false)
+ *   - excludeUnknownState: Filter out volumes with unknown state (default: false)
  *
- * @returns {Promise<IndexStatus>} Current indexing status:
- *   - enabled: Whether indexing is enabled
- *   - status: Current status message
- *   - scanBaseTime: Last completed scan time
- *   - reasoning: Explanation for current status
+ * @returns {Promise<IndexStatus>} Current indexing status
  *
  * @throws {MdutilError}
  *   - If the path doesn't exist
  *   - If mdutil command fails
  *   - If root privileges are required
- *
- * @example
- * Check home directory status:
- * ```typescript
- * const status = await getIndexingStatus('~')
- * console.log('Indexing enabled:', status.enabled)
- * console.log('Last scan:', status.scanBaseTime)
- * ```
- *
- * @example
- * Check with verbose output:
- * ```typescript
- * const status = await getIndexingStatus('/Volumes/Data', {
- *   verbose: true
- * })
- * console.log('Status:', status.status)
- * console.log('Reason:', status.reasoning)
- * ```
  */
 export const getIndexingStatus = async (
   volumePath: string,
-  options: MdutilOptions = {}
+  options: MdutilOptions = {
+    verbose: false,
+    resolveRealPath: true,
+    excludeSystemVolumes: false,
+    excludeUnknownState: false
+  }
 ): Promise<IndexStatus> => {
   const validatedOptions = MdutilOptionsSchema.parse(options)
   const args = ['-s']
@@ -104,7 +113,7 @@ export const getIndexingStatus = async (
 
   try {
     const { stdout } = await execAsync(`mdutil ${args.map(arg => `"${arg}"`).join(' ')}`)
-    return parseIndexingStatus(stdout)
+    return parseIndexingStatus(stdout, volumePath)
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
@@ -119,39 +128,64 @@ export const getIndexingStatus = async (
 }
 
 /**
+ * Get indexing status for all volumes.
+ * Returns an array of status objects for each volume.
+ *
+ * @param {MdutilOptions} [options] - Configuration options:
+ *   - verbose: Include additional status details
+ *   - resolveRealPath: Resolve symlinks to real paths (default: true)
+ *   - excludeSystemVolumes: Filter out system volumes (default: false)
+ *   - excludeUnknownState: Filter out volumes with unknown state (default: false)
+ *
+ * @returns {Promise<IndexStatus[]>} Array of volume statuses
+ */
+export const getAllVolumesStatus = async (
+  options: MdutilOptions = {
+    verbose: false,
+    resolveRealPath: true,
+    excludeSystemVolumes: false,
+    excludeUnknownState: false
+  }
+): Promise<IndexStatus[]> => {
+  const validatedOptions = MdutilOptionsSchema.parse(options)
+  const args = ['-s', '-a']
+  if (validatedOptions.verbose) args.push('-v')
+
+  try {
+    const { stdout } = await execAsync(`mdutil ${args.join(' ')}`)
+    const volumes = stdout.split('\n\n').filter(Boolean)
+    const results = volumes.map(volume => {
+      const pathMatch = volume.match(/^([^:]+):/)
+      const volumePath = pathMatch?.[1] ?? '/'
+      return parseIndexingStatus(volume, volumePath)
+    })
+
+    return results.filter(result => {
+      if (validatedOptions.excludeSystemVolumes && result.isSystemVolume) return false
+      if (validatedOptions.excludeUnknownState && result.state === 'unknown') return false
+      return true
+    })
+  } catch (error) {
+    if (error instanceof Error) {
+      const requiresRoot = error.message.includes('Operation not permitted')
+      throw new MdutilError(
+        `Failed to get all volumes status: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
+    }
+    throw error
+  }
+}
+
+/**
  * Enable or disable Spotlight indexing for a volume or directory.
- * Controls whether files in the specified location are indexed.
  *
  * Note: This operation often requires root privileges.
  *
  * @param {string} volumePath - Path to enable/disable indexing for
  * @param {boolean} enable - Whether to enable (true) or disable (false) indexing
  * @returns {Promise<void>}
- *
- * @throws {MdutilError}
- *   - If root privileges are required
- *   - If mdutil command fails
- *   - If the path doesn't exist
- *
- * @example
- * Enable indexing:
- * ```typescript
- * try {
- *   await setIndexing('~/Documents', true)
- *   console.log('Indexing enabled')
- * } catch (error) {
- *   if (error instanceof MdutilError && error.requiresRoot) {
- *     console.log('Please run with sudo')
- *   }
- * }
- * ```
- *
- * @example
- * Disable indexing:
- * ```typescript
- * await setIndexing('/Volumes/Backup', false)
- * console.log('Indexing disabled')
- * ```
  */
 export const setIndexing = async (volumePath: string, enable: boolean): Promise<void> => {
   try {
@@ -171,30 +205,11 @@ export const setIndexing = async (volumePath: string, enable: boolean): Promise<
 
 /**
  * Erase and rebuild the Spotlight index.
- * Useful when the index becomes corrupted or needs refreshing.
  *
  * Note: This operation often requires root privileges.
  *
  * @param {string} volumePath - Path to rebuild index for
  * @returns {Promise<void>}
- *
- * @throws {MdutilError}
- *   - If root privileges are required
- *   - If mdutil command fails
- *   - If the path doesn't exist
- *
- * @example
- * Rebuild index:
- * ```typescript
- * try {
- *   await eraseAndRebuildIndex('/')
- *   console.log('Index rebuild started')
- * } catch (error) {
- *   if (error instanceof MdutilError && error.requiresRoot) {
- *     console.log('Please run with sudo')
- *   }
- * }
- * ```
  */
 export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> => {
   try {
@@ -216,28 +231,10 @@ export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> =>
  * List the contents of the Spotlight index.
  * Shows what files and directories are currently indexed.
  *
- * Note: This operation often requires root privileges.
+ * Note: This operation requires root privileges.
  *
  * @param {string} volumePath - Path to list index contents for
  * @returns {Promise<string>} Index contents listing
- *
- * @throws {MdutilError}
- *   - If root privileges are required
- *   - If mdutil command fails
- *   - If the path doesn't exist
- *
- * @example
- * List indexed files:
- * ```typescript
- * try {
- *   const contents = await listIndexContents('~')
- *   console.log('Indexed files:', contents)
- * } catch (error) {
- *   if (error instanceof MdutilError && error.requiresRoot) {
- *     console.log('Please run with sudo')
- *   }
- * }
- * ```
  */
 export const listIndexContents = async (volumePath: string): Promise<string> => {
   try {
@@ -257,77 +254,51 @@ export const listIndexContents = async (volumePath: string): Promise<string> => 
 }
 
 /**
- * Flush local caches to network devices.
- * Ensures all metadata changes are synchronized.
+ * Get the Spotlight configuration for a volume.
+ * Returns the contents of VolumeConfig.plist.
  *
- * Note: This operation often requires root privileges.
+ * Note: This operation requires root privileges.
  *
- * @param {string} volumePath - Path to flush caches for
- * @returns {Promise<void>}
- *
- * @throws {MdutilError}
- *   - If root privileges are required
- *   - If mdutil command fails
- *   - If the path doesn't exist
- *
- * @example
- * ```typescript
- * try {
- *   await flushCaches('/')
- *   console.log('Caches flushed successfully')
- * } catch (error) {
- *   if (error instanceof MdutilError && error.requiresRoot) {
- *     console.log('Please run with sudo')
- *   }
- * }
- * ```
+ * @param {string} volumePath - Path to get configuration for
+ * @returns {Promise<string>} Volume configuration
  */
-export const flushCaches = async (volumePath: string): Promise<void> => {
+export const getVolumeConfig = async (volumePath: string): Promise<string> => {
   try {
-    await execAsync(`mdutil -f "${volumePath}"`)
+    const { stdout } = await execAsync(`mdutil -P "${volumePath}"`)
+    return stdout.trim()
   } catch (error) {
     if (error instanceof Error) {
-      const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(`Failed to flush caches: ${error.message}`, error.message, requiresRoot)
+      const requiresRoot = error.message.includes('Must be root')
+      throw new MdutilError(
+        `Failed to get volume config: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
     }
     throw error
   }
 }
 
 /**
- * Remove the Spotlight index directory.
- * Completely removes the index without rebuilding.
+ * Remove the Spotlight index directory for a volume.
+ * Does not disable indexing, but forces Spotlight to reevaluate the volume.
  *
- * Note: This operation often requires root privileges.
- * Use with caution as it will require a full reindex.
+ * Note: This operation requires root privileges.
  *
  * @param {string} volumePath - Path to remove index for
  * @returns {Promise<void>}
- *
- * @throws {MdutilError}
- *   - If root privileges are required
- *   - If mdutil command fails
- *   - If the path doesn't exist
- *
- * @example
- * ```typescript
- * try {
- *   await removeIndex('/')
- *   console.log('Index removed successfully')
- * } catch (error) {
- *   if (error instanceof MdutilError && error.requiresRoot) {
- *     console.log('Please run with sudo')
- *   }
- * }
- * ```
  */
-export const removeIndex = async (volumePath: string): Promise<void> => {
+export const removeIndexDirectory = async (volumePath: string): Promise<void> => {
   try {
     await execAsync(`mdutil -X "${volumePath}"`)
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
-      throw new MdutilError(`Failed to remove index: ${error.message}`, error.message, requiresRoot)
+      throw new MdutilError(
+        `Failed to remove index directory: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
     }
     throw error
   }

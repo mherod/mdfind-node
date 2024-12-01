@@ -120,33 +120,41 @@ export const MdlsOptionsSchema = z
   }))
 
 /**
- * Schema for mdutil command options.
- * Validates and transforms options for the mdutil indexing utility command.
- *
- * Options:
- * - verbose: Enable detailed output
- *
- * Default values:
- * - verbose: false
- *
- * @example
- * Basic indexing options:
- * ```typescript
- * const options = MdutilOptionsSchema.parse({
- *   verbose: true
- * })
- * ```
+ * Options for mdutil operations
  */
 export const MdutilOptionsSchema = z
   .object({
-    verbose: z.boolean().optional()
+    /**
+     * Include additional status details in output
+     */
+    verbose: z.boolean().optional(),
+
+    /**
+     * Resolve symlinks to real paths
+     */
+    resolveRealPath: z.boolean().optional(),
+
+    /**
+     * Filter system volumes from results
+     * Only applies to getAllVolumesStatus
+     */
+    excludeSystemVolumes: z.boolean().optional(),
+
+    /**
+     * Filter volumes with unknown state from results
+     * Only applies to getAllVolumesStatus
+     */
+    excludeUnknownState: z.boolean().optional()
   })
   .strict()
   .transform(opts => ({
     verbose: false,
+    resolveRealPath: true,
+    excludeSystemVolumes: false,
+    excludeUnknownState: false,
     ...opts
   }))
 
 export type MdfindOptions = z.input<typeof MdfindOptionsSchema>
 export type MdlsOptions = z.input<typeof MdlsOptionsSchema>
-export type MdutilOptions = z.input<typeof MdutilOptionsSchema>
+export type MdutilOptions = z.infer<typeof MdutilOptionsSchema>

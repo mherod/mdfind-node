@@ -1,10 +1,9 @@
 {
   "name": "mdfind-node",
   "version": "1.2.0",
-  "description": "Node.js wrapper for macOS mdfind command",
+  "description": "Node.js wrapper for macOS mdfind and mdls commands",
   "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -13,65 +12,74 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage",
-    "example": "tsx examples/basic.ts",
-    "example:live": "tsx examples/live-search.ts",
-    "example:advanced": "tsx examples/advanced.ts",
-    "example:metadata": "tsx examples/metadata.ts",
-    "example:query": "tsx examples/query-builder.ts",
-    "example:batch": "tsx examples/batch.ts",
-    "example:extended": "tsx examples/extended-metadata.ts",
-    "example:discover": "tsx examples/discover.ts",
-    "example:search": "tsx examples/advanced-search.ts",
-    "example:types": "tsx examples/content-types.ts",
+    "clean": "rm -rf dist",
     "lint": "eslint \"src/**/*.ts\" \"examples/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" \"examples/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"examples/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"examples/**/*.ts\"",
-    "prepare": "husky"
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "coverage": "vitest run --coverage",
+    "prepublishOnly": "pnpm run build",
+    "prepare": "husky",
+    "example:basic": "tsx examples/basic.ts",
+    "example:advanced": "tsx examples/advanced.ts",
+    "example:live-search": "tsx examples/live-search.ts",
+    "example:metadata": "tsx examples/metadata.ts",
+    "example:extended-metadata": "tsx examples/extended-metadata.ts",
+    "example:query-builder": "tsx examples/query-builder.ts",
+    "example:batch": "tsx examples/batch.ts",
+    "example:discover": "tsx examples/discover.ts",
+    "example:advanced-search": "tsx examples/advanced-search.ts",
+    "example:content-types": "tsx examples/content-types.ts",
+    "example:mdutil": "tsx examples/mdutil-status.ts"
   },
+  "keywords": [
+    "macos",
+    "spotlight",
+    "mdfind",
+    "mdls",
+    "metadata",
+    "search",
+    "file-search",
+    "spotlight-search"
+  ],
+  "author": "Matthew Herod",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mherod/mdfind-node.git"
+    "url": "https://github.com/mherod/mdfind-node.git"
   },
   "bugs": {
     "url": "https://github.com/mherod/mdfind-node/issues"
   },
   "homepage": "https://github.com/mherod/mdfind-node#readme",
-  "keywords": [
-    "mdfind",
-    "macos",
-    "spotlight"
-  ],
-  "author": "Matthew Herod",
-  "license": "ISC",
   "devDependencies": {
-    "@types/node": "^22.10.1",
-    "@typescript-eslint/eslint-plugin": "^8.16.0",
-    "@typescript-eslint/parser": "^8.16.0",
-    "@vitest/coverage-v8": "^2.1.6",
-    "eslint": "^9.16.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.4.1",
-    "ts-node": "^10.9.2",
-    "tsup": "^8.3.5",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.6"
+    "@types/node": "^20.10.1",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.1.0",
+    "prettier": "^3.1.0",
+    "tsup": "^8.0.1",
+    "tsx": "^4.6.1",
+    "typescript": "^5.3.2",
+    "vitest": "^0.34.6"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3.22.4"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "lint-staged": {
     "*.ts": [

@@ -6,11 +6,13 @@ export {
   LiveSearchEventsSchema,
   MdfindErrorSchema,
   IndexStatusSchema,
+  IndexingStateSchema,
   type SpotlightContentType,
   type SpotlightAttribute,
   type MetadataResult,
   type LiveSearchEvents,
-  type IndexStatus
+  type IndexStatus,
+  type IndexingState
 } from './core/index.js'
 
 // Metadata schemas and types
