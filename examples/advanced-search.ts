@@ -1,4 +1,4 @@
-import { SpotlightQuery } from '../src/query-builder.js'
+import { QueryBuilder } from '../src/query-builder.js'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -6,7 +6,11 @@ async function main() {
   try {
     // Example 1: Find applications
     console.log('\n1. Finding applications:')
-    const apps = await new SpotlightQuery().isApplication().inDirectory('/Applications').execute()
+    const apps = await new QueryBuilder()
+      .isApplication()
+      .inDirectory('/Applications')
+      .maxBuffer(2 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${apps.length} applications`)
     console.log(
@@ -16,14 +20,15 @@ async function main() {
 
     // Example 2: Find recent images
     console.log('\n2. Finding recent images:')
-    const images = await new SpotlightQuery()
+    const images = await new QueryBuilder()
       .useOperator('||')
       .contentType('public.jpeg')
       .contentType('public.png')
       .contentType('public.heic')
       .modifiedAfter(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Last week
       .inDirectory(join(homedir(), 'Pictures'))
-      .execute({ maxBuffer: 5 * 1024 * 1024 }) // 5MB buffer
+      .maxBuffer(5 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${images.length} recent images`)
     console.log(
@@ -33,11 +38,12 @@ async function main() {
 
     // Example 3: Find recent property lists
     console.log('\n3. Finding recent property lists:')
-    const plists = await new SpotlightQuery()
+    const plists = await new QueryBuilder()
       .contentType('com.apple.property-list')
       .modifiedAfter(new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
       .inDirectory(join(homedir(), 'Library'))
-      .execute({ maxBuffer: 2 * 1024 * 1024 }) // 2MB buffer
+      .maxBuffer(2 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${plists.length} recent property lists`)
     console.log(
@@ -47,7 +53,7 @@ async function main() {
 
     // Example 4: Find recent source code files
     console.log('\n4. Finding recent source code files:')
-    const sourceFiles = await new SpotlightQuery()
+    const sourceFiles = await new QueryBuilder()
       .useOperator('||')
       .extension('ts')
       .extension('js')
@@ -56,7 +62,8 @@ async function main() {
       .extension('sh')
       .modifiedAfter(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Last week
       .inDirectory(homedir())
-      .execute({ maxBuffer: 2 * 1024 * 1024 }) // 2MB buffer
+      .maxBuffer(2 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${sourceFiles.length} recent source files`)
     console.log(
@@ -66,14 +73,15 @@ async function main() {
 
     // Example 5: Find recent documents
     console.log('\n5. Finding recent documents:')
-    const docs = await new SpotlightQuery()
+    const docs = await new QueryBuilder()
       .useOperator('||')
       .contentType('com.adobe.pdf')
       .contentType('public.plain-text')
       .contentType('public.rtf')
       .modifiedAfter(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Last week
       .inDirectory(join(homedir(), 'Documents'))
-      .execute({ maxBuffer: 2 * 1024 * 1024 }) // 2MB buffer
+      .maxBuffer(2 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${docs.length} recent documents`)
     console.log(
@@ -83,11 +91,12 @@ async function main() {
 
     // Example 6: Find recent large files
     console.log('\n6. Finding recent large files:')
-    const largeFiles = await new SpotlightQuery()
+    const largeFiles = await new QueryBuilder()
       .largerThan(100 * 1024 * 1024) // Larger than 100MB
       .modifiedAfter(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // Last 30 days
       .inDirectory(homedir())
-      .execute({ maxBuffer: 2 * 1024 * 1024 }) // 2MB buffer
+      .maxBuffer(2 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${largeFiles.length} recent large files`)
     console.log(
@@ -97,10 +106,11 @@ async function main() {
 
     // Example 7: Find recent downloads
     console.log('\n7. Finding recent downloads:')
-    const downloads = await new SpotlightQuery()
+    const downloads = await new QueryBuilder()
       .inDirectory(join(homedir(), 'Downloads'))
       .modifiedAfter(new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
-      .execute({ maxBuffer: 2 * 1024 * 1024 }) // 2MB buffer
+      .maxBuffer(2 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${downloads.length} recent downloads`)
     console.log(
@@ -110,11 +120,12 @@ async function main() {
 
     // Example 8: Find recent shell scripts
     console.log('\n8. Finding recent shell scripts:')
-    const scripts = await new SpotlightQuery()
+    const scripts = await new QueryBuilder()
       .contentType('public.shell-script')
       .modifiedAfter(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Last week
       .inDirectory(homedir())
-      .execute({ maxBuffer: 2 * 1024 * 1024 }) // 2MB buffer
+      .maxBuffer(2 * 1024 * 1024)
+      .execute()
 
     console.log(`Found ${scripts.length} recent shell scripts`)
     console.log(

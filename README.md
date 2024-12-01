@@ -50,13 +50,14 @@ const photos = await mdfind('kMDItemContentType == "public.image"', {
 })
 
 // Use the query builder for complex searches
-import { SpotlightQuery } from 'mdfind-node'
+import { QueryBuilder } from 'mdfind-node'
 
-const query = new SpotlightQuery()
+const query = new QueryBuilder()
   .contentType('public.image')
-  .createdAfter(new Date('2024-01-01'))
+  .createdAfter('2023-01-01')
   .hasGPS()
-  .minImageDimensions(3000, 2000)
+  .inDirectory('~/Pictures')
+  .execute()
 
 const highResPhotos = await mdfind(query.toString())
 ```

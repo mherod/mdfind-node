@@ -1,17 +1,16 @@
-import { mdfind } from '../src/mdfind.js'
-import { SpotlightQuery } from '../src/query-builder.js'
+import { QueryBuilder } from '../src/query-builder.js'
 
 async function main() {
   try {
     // Example 1: Find recent high-res photos with GPS data
     console.log('\n1. Finding recent high-res photos with GPS data:')
-    const photoQuery = new SpotlightQuery()
+    const photoQuery = new QueryBuilder()
       .contentType('public.image')
       .createdAfter(new Date('2023-01-01'))
       .hasGPS()
       .minImageDimensions(3000, 2000)
 
-    const photos = await mdfind(photoQuery.toString())
+    const photos = await photoQuery.execute()
     console.log(`Found ${photos.length} photos`)
     console.log(
       'First 3:',
@@ -20,12 +19,12 @@ async function main() {
 
     // Example 2: Find high-quality audio files by a specific artist
     console.log('\n2. Finding high-quality audio files by an artist:')
-    const audioQuery = new SpotlightQuery()
+    const audioQuery = new QueryBuilder()
       .contentType('public.audio')
       .byAuthor('Radiohead')
       .minAudioQuality(44100, 320000)
 
-    const audioFiles = await mdfind(audioQuery.toString())
+    const audioFiles = await audioQuery.execute()
     console.log(`Found ${audioFiles.length} audio files`)
     console.log(
       'First 3:',
@@ -34,13 +33,13 @@ async function main() {
 
     // Example 3: Find PDF documents with specific keywords
     console.log('\n3. Finding PDF documents with specific keywords:')
-    const pdfQuery = new SpotlightQuery()
+    const pdfQuery = new QueryBuilder()
       .contentType('com.adobe.pdf')
       .useOperator('||')
       .hasKeyword('typescript')
       .hasKeyword('javascript')
 
-    const pdfs = await mdfind(pdfQuery.toString())
+    const pdfs = await pdfQuery.execute()
     console.log(`Found ${pdfs.length} PDF files`)
     console.log(
       'First 3:',
@@ -49,16 +48,15 @@ async function main() {
 
     // Example 4: Find recently modified source code files
     console.log('\n4. Finding recently modified source code files:')
-    const codeQuery = new SpotlightQuery()
+    const codeQuery = new QueryBuilder()
       .useOperator('||')
       .extension('ts')
       .extension('js')
       .modifiedAfter(new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
+      .inDirectory(process.cwd()) // Only search in current project
+      .maxBuffer(1024 * 1024) // 1MB buffer
 
-    const codeFiles = await mdfind(codeQuery.toString(), {
-      maxBuffer: 1024 * 1024, // 1MB buffer
-      onlyIn: process.cwd() // Only search in current project
-    })
+    const codeFiles = await codeQuery.execute()
     console.log(`Found ${codeFiles.length} code files`)
     console.log(
       'First 3:',

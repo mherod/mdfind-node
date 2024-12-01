@@ -769,30 +769,53 @@ export class QueryBuilder {
   }
 
   /**
-   * Execute the search with the built query and options.
+   * Set the maximum buffer size for the search results.
    *
-   * @returns {Promise<string[]>} Array of file paths matching the query
-   * @throws {Error} If the query is invalid or search fails
+   * @param {number} bytes - Maximum buffer size in bytes
+   * @returns {this} The builder instance for chaining
    *
    * @example
-   * Complex search:
    * ```typescript
    * const files = await new QueryBuilder()
-   *   .contentType('public.image')
-   *   .createdAfter('2023-01-01')
-   *   .largerThan(1024 * 1024)
-   *   .inDirectory('~/Pictures')
-   *   .attribute('kMDItemPixelHeight')
+   *   .maxBuffer(5 * 1024 * 1024) // 5MB buffer
    *   .execute()
    * ```
    */
+  maxBuffer(bytes: number): this {
+    this.options.maxBuffer = bytes
+    return this
+  }
+
+  /**
+   * Convert the query to a string format that mdfind understands.
+   * Used internally by execute() and for debugging purposes.
+   *
+   * @returns {string} The formatted query string
+   *
+   * @example
+   * ```typescript
+   * const query = new QueryBuilder()
+   *   .contentType('public.image')
+   *   .hasGPS()
+   *   .toString()
+   * // Returns: 'kMDItemContentType == "public.image" && kMDItemLatitude > 0'
+   * ```
+   */
+  toString(): string {
+    return this.conditions.join(` ${this.operator} `) || ''
+  }
+
+  /**
+   * Execute the query and return matching file paths.
+   *
+   * @returns {Promise<string[]>} Array of matching file paths
+   */
   async execute(): Promise<string[]> {
-    const query = this.conditions.join(` ${this.operator} `) || ''
-    return mdfind(query, this.options)
+    return mdfind(this.toString(), this.options)
   }
 }
 
 /**
- * @deprecated Use QueryBuilder instead. This export is maintained for backward compatibility.
+ * @deprecated Use QueryBuilder instead. SpotlightQuery will be removed in the next major version.
  */
 export const SpotlightQuery = QueryBuilder

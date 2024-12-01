@@ -1,4 +1,4 @@
-import { SpotlightQuery } from '../src/query-builder.js'
+import { QueryBuilder } from '../src/query-builder.js'
 import { mdfindBatch, mdfindMultiDirectory, mdfindMultiQuery } from '../src/batch.js'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -9,18 +9,18 @@ async function main() {
     console.log('\n1. Running multiple searches in parallel:')
     const searches = [
       {
-        query: new SpotlightQuery().contentType('public.image').hasGPS().toString(),
+        query: new QueryBuilder().contentType('public.image').hasGPS().toString(),
         onlyIn: join(homedir(), 'Pictures')
       },
       {
-        query: new SpotlightQuery()
+        query: new QueryBuilder()
           .contentType('public.audio')
           .minAudioQuality(44100, 320000)
           .toString(),
         onlyIn: join(homedir(), 'Music')
       },
       {
-        query: new SpotlightQuery()
+        query: new QueryBuilder()
           .contentType('com.adobe.pdf')
           .modifiedAfter(new Date('2024-01-01'))
           .toString(),
@@ -50,7 +50,7 @@ async function main() {
       join(homedir(), 'Downloads'),
       join(homedir(), 'Desktop')
     ]
-    const multiDirQuery = new SpotlightQuery()
+    const multiDirQuery = new QueryBuilder()
       .extension('ts')
       .modifiedAfter(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Last week
       .toString()
@@ -72,9 +72,9 @@ async function main() {
     // Example 3: Run multiple queries in one directory
     console.log('\n3. Running multiple queries in Documents:')
     const queries = [
-      new SpotlightQuery().contentType('public.image').hasGPS().toString(),
-      new SpotlightQuery().contentType('public.movie').toString(),
-      new SpotlightQuery().contentType('com.adobe.pdf').toString()
+      new QueryBuilder().contentType('public.image').hasGPS().toString(),
+      new QueryBuilder().contentType('public.movie').toString(),
+      new QueryBuilder().contentType('com.adobe.pdf').toString()
     ]
 
     const documentsPath = join(homedir(), 'Documents')
