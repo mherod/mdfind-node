@@ -1,6 +1,6 @@
 {
   "name": "mdfind-node",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Node.js wrapper for macOS mdfind command",
   "type": "module",
   "main": "./dist/index.js",
