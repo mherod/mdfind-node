@@ -3,10 +3,12 @@ import {
   listImporters,
   listAttributes,
   getSchema,
-  reimportForImporter
+  reimportForImporter,
+  MdimportError
 } from '../src/mdimport.js'
 import { homedir } from 'os'
 import { join } from 'path'
+import { writeFile } from 'fs/promises'
 
 async function main() {
   try {
@@ -62,7 +64,12 @@ async function main() {
       const reimportResult = await reimportForImporter(chatImporter)
       console.log('Reimport result:', reimportResult)
     } catch (error) {
-      console.log('Failed to reimport Chat files:', error)
+      if (error instanceof MdimportError) {
+        console.log('Failed to reimport Chat files:', error.message)
+        if (error.requiresRoot) {
+          console.log('Root privileges required')
+        }
+      }
     }
 
     // Example 7: Import with output file
@@ -75,6 +82,28 @@ async function main() {
     })
     console.log('Import with output file result:', outputResult)
     console.log('Results written to:', outputPath)
+
+    // Example 8: Immediate indexing of a new file
+    console.log('\n8. Immediate indexing of a new file:')
+    const testFilePath = join(process.cwd(), 'test-file.txt')
+    try {
+      // Create a test file
+      await writeFile(testFilePath, 'Test content for immediate indexing', 'utf-8')
+      console.log('Created test file:', testFilePath)
+
+      // Force immediate indexing
+      const immediateResult = await mdimport(testFilePath, {
+        immediate: true
+      })
+      console.log('Immediate indexing result:', immediateResult)
+    } catch (error) {
+      if (error instanceof MdimportError) {
+        console.log('Failed to perform immediate indexing:', error.message)
+        if (error.requiresRoot) {
+          console.log('Root privileges required')
+        }
+      }
+    }
   } catch (error) {
     console.error('Error:', error)
     process.exit(1)

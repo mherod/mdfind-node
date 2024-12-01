@@ -5,6 +5,22 @@ import { z } from 'zod'
 const execFileAsync = promisify(execFile)
 
 /**
+ * Custom error class for mdimport-related errors.
+ * Provides additional context about the error and whether root access is required.
+ */
+export class MdimportError extends Error {
+  public readonly name = 'MdimportError' as const
+
+  constructor(
+    message: string,
+    public readonly stderr: string,
+    public readonly requiresRoot: boolean = false
+  ) {
+    super(message)
+  }
+}
+
+/**
  * Debug levels for mdimport testing
  */
 export const MdimportDebugLevel = {
@@ -30,7 +46,9 @@ export const MdimportOptionsSchema = z
     /** Show performance information (requires test mode) */
     showPerformance: z.boolean().default(false),
     /** Maximum buffer size for output */
-    maxBuffer: z.number().default(1024 * 512)
+    maxBuffer: z.number().default(1024 * 512),
+    /** Force immediate indexing */
+    immediate: z.boolean().default(false)
   })
   .strict()
 
@@ -41,6 +59,7 @@ export type MdimportOptions = z.input<typeof MdimportOptionsSchema>
  * @param paths Files or directories to import
  * @param options Import options
  * @returns The command output as a string
+ * @throws {MdimportError} If the import fails
  */
 export async function mdimport(
   paths: string | string[],
@@ -49,7 +68,9 @@ export async function mdimport(
   const opts = MdimportOptionsSchema.parse(options)
   const args: string[] = []
 
-  if (opts.test) {
+  if (opts.immediate) {
+    args.push('-i')
+  } else if (opts.test) {
     args.push('-t')
     if (opts.debugLevel) {
       args.push('-d', opts.debugLevel)
@@ -65,48 +86,126 @@ export async function mdimport(
   const pathArray = Array.isArray(paths) ? paths : [paths]
   args.push(...pathArray)
 
-  const { stdout } = await execFileAsync('mdimport', args, {
-    maxBuffer: opts.maxBuffer
-  })
+  try {
+    const { stdout, stderr } = await execFileAsync('mdimport', args, {
+      maxBuffer: opts.maxBuffer
+    })
 
-  return stdout.trim()
+    if (stderr) {
+      throw new MdimportError('mdimport command failed', stderr)
+    }
+
+    return stdout.trim()
+  } catch (error) {
+    if (error instanceof Error) {
+      const requiresRoot = error.message.includes('Operation not permitted')
+      throw new MdimportError(
+        `Failed to import: ${error.message}`,
+        error instanceof MdimportError ? error.stderr : error.message,
+        requiresRoot
+      )
+    }
+    throw error
+  }
 }
 
 /**
  * List all installed Spotlight importers
+ * @returns Array of importer paths
+ * @throws {MdimportError} If the command fails
  */
 export async function listImporters(): Promise<string[]> {
-  const { stdout } = await execFileAsync('mdimport', ['-L'])
-  return stdout
-    .trim()
-    .split('\n')
-    .filter(line => line.length > 0)
+  try {
+    const { stdout, stderr } = await execFileAsync('mdimport', ['-L'])
+    if (stderr) {
+      throw new MdimportError('Failed to list importers', stderr)
+    }
+    return stdout
+      .trim()
+      .split('\n')
+      .filter(line => line.length > 0)
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new MdimportError(
+        'Failed to list importers',
+        error instanceof MdimportError ? error.stderr : error.message
+      )
+    }
+    throw error
+  }
 }
 
 /**
  * List all available Spotlight attributes and their localizations
+ * @returns Array of attribute descriptions
+ * @throws {MdimportError} If the command fails
  */
 export async function listAttributes(): Promise<string[]> {
-  const { stdout } = await execFileAsync('mdimport', ['-A'])
-  return stdout
-    .trim()
-    .split('\n')
-    .filter(line => line.length > 0)
+  try {
+    const { stdout, stderr } = await execFileAsync('mdimport', ['-A'])
+    if (stderr) {
+      throw new MdimportError('Failed to list attributes', stderr)
+    }
+    return stdout
+      .trim()
+      .split('\n')
+      .filter(line => line.length > 0)
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new MdimportError(
+        'Failed to list attributes',
+        error instanceof MdimportError ? error.stderr : error.message
+      )
+    }
+    throw error
+  }
 }
 
 /**
  * Print the Spotlight schema
+ * @returns Schema XML as a string
+ * @throws {MdimportError} If the command fails
  */
 export async function getSchema(): Promise<string> {
-  const { stdout } = await execFileAsync('mdimport', ['-X'])
-  return stdout.trim()
+  try {
+    const { stdout, stderr } = await execFileAsync('mdimport', ['-X'])
+    if (stderr) {
+      throw new MdimportError('Failed to get schema', stderr)
+    }
+    return stdout.trim()
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new MdimportError(
+        'Failed to get schema',
+        error instanceof MdimportError ? error.stderr : error.message
+      )
+    }
+    throw error
+  }
 }
 
 /**
  * Reimport files for UTIs claimed by a specific importer
  * @param importerPath Path to the importer (e.g., /System/Library/Spotlight/Chat.mdimporter)
+ * @returns Command output
+ * @throws {MdimportError} If the command fails
  */
 export async function reimportForImporter(importerPath: string): Promise<string> {
-  const { stdout } = await execFileAsync('mdimport', ['-r', importerPath])
-  return stdout.trim()
+  try {
+    const { stdout, stderr } = await execFileAsync('mdimport', ['-r', importerPath])
+    if (stderr) {
+      throw new MdimportError('Failed to reimport files', stderr)
+    }
+    return stdout.trim()
+  } catch (error) {
+    if (error instanceof Error) {
+      const requiresRoot = error.message.includes('Operation not permitted')
+      throw new MdimportError(
+        'Failed to reimport files',
+        error instanceof MdimportError ? error.stderr : error.message,
+        requiresRoot
+      )
+    }
+    throw error
+  }
 }
