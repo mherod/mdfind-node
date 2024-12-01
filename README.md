@@ -47,18 +47,18 @@ const results = await mdfind('query')
 // Advanced search with options
 const photos = await mdfind('kMDItemContentType == "public.image"', {
   onlyIn: '~/Pictures',
-  live: true,  // Keep watching for changes
-  attr: 'kMDItemPixelHeight'  // Get image heights
+  live: true, // Keep watching for changes
+  attr: 'kMDItemPixelHeight' // Get image heights
 })
 
 // Use the query builder for complex searches
 import { QueryBuilder } from 'mdfind-node'
 
 const query = new QueryBuilder()
-  .isText()                    // Find text-based content
-  .extension('md')             // Markdown files
+  .isText() // Find text-based content
+  .extension('md') // Markdown files
   .modifiedAfter('2024-01-01') // Modified this year
-  .inDirectory('~/Documents')   // In Documents folder
+  .inDirectory('~/Documents') // In Documents folder
   .execute()
 ```
 
@@ -69,14 +69,18 @@ const query = new QueryBuilder()
 ```typescript
 import { mdfindLive } from 'mdfind-node'
 
-const search = mdfindLive('kMDItemContentType == "public.pdf"', {
-  onlyIn: '~/Downloads',
-  reprint: true
-}, {
-  onResult: paths => console.log('New matches:', paths),
-  onError: error => console.error('Search error:', error),
-  onEnd: () => console.log('Search ended')
-})
+const search = mdfindLive(
+  'kMDItemContentType == "public.pdf"',
+  {
+    onlyIn: '~/Downloads',
+    reprint: true
+  },
+  {
+    onResult: paths => console.log('New matches:', paths),
+    onError: error => console.error('Search error:', error),
+    onEnd: () => console.log('Search ended')
+  }
+)
 ```
 
 ### 📦 Batch Operations
@@ -106,25 +110,16 @@ console.log('XMP:', metadata.xmp)
 import { QueryBuilder } from 'mdfind-node'
 
 // Find text-based files
-const textFiles = await new QueryBuilder()
-  .isText()
-  .execute()
+const textFiles = await new QueryBuilder().isText().execute()
 
 // Find audiovisual content
-const mediaFiles = await new QueryBuilder()
-  .isAudiovisual()
-  .execute()
+const mediaFiles = await new QueryBuilder().isAudiovisual().execute()
 
 // Find application bundles
-const apps = await new QueryBuilder()
-  .isBundle()
-  .inDirectory('/Applications')
-  .execute()
+const apps = await new QueryBuilder().isBundle().inDirectory('/Applications').execute()
 
 // Find Markdown files
-const docs = await new QueryBuilder()
-  .isMarkdown()
-  .execute()
+const docs = await new QueryBuilder().isMarkdown().execute()
 ```
 
 ## 🔍 Attribute Discovery
@@ -177,30 +172,35 @@ public.item
 ### Common Content Types
 
 Basic Types:
+
 - `public.item` - Base type for all items
 - `public.content` - Base type for all content
 - `public.text` - Text-based content
 - `public.composite-content` - Content with multiple parts
 
 Documents:
+
 - `public.plain-text` - Plain text files
 - `public.rtf` - Rich Text Format documents
 - `com.adobe.pdf` - Adobe PDF Document
 - `net.daringfireball.markdown` - Markdown Document
 
 Media:
+
 - `public.image` - Image files (JPEG, PNG, etc.)
 - `public.audio` - Audio files (MP3, WAV, etc.)
 - `public.movie` - Video files (MP4, MOV, etc.)
 - `public.audiovisual-content` - Audio/Visual content
 
 Code:
+
 - `public.source-code` - Source Code File
 - `public.shell-script` - Shell Script
 - `public.json` - JSON File
 - `public.yaml` - YAML File
 
 System:
+
 - `com.apple.bundle` - Generic Bundle
 - `com.apple.application` - Generic Application
 - `com.apple.property-list` - Property List (plist)

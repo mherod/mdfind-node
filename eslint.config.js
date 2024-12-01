@@ -26,42 +26,57 @@ export default [
       ...eslintConfigPrettier.rules,
 
       // TypeScript specific rules
-      '@typescript-eslint/explicit-function-return-type': ['error', {
-        allowExpressions: true,
-        allowTypedFunctionExpressions: true,
-        allowHigherOrderFunctions: true,
-        allowDirectConstAssertionInArrowFunctions: true
-      }],
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_'
-      }],
-      '@typescript-eslint/explicit-member-accessibility': ['error', {
-        accessibility: 'explicit',
-        overrides: {
-          constructors: 'no-public',
-          parameterProperties: 'explicit'
+      '@typescript-eslint/explicit-function-return-type': [
+        'error',
+        {
+          allowExpressions: true,
+          allowTypedFunctionExpressions: true,
+          allowHigherOrderFunctions: true,
+          allowDirectConstAssertionInArrowFunctions: true
         }
-      }],
+      ],
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_'
+        }
+      ],
+      '@typescript-eslint/explicit-member-accessibility': [
+        'error',
+        {
+          accessibility: 'explicit',
+          overrides: {
+            constructors: 'no-public',
+            parameterProperties: 'explicit'
+          }
+        }
+      ],
       '@typescript-eslint/member-ordering': 'warn',
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': ['error', {
-        checksVoidReturn: false
-      }],
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        {
+          checksVoidReturn: false
+        }
+      ],
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'warn',
-      '@typescript-eslint/strict-boolean-expressions': ['warn', {
-        allowString: true,
-        allowNumber: true,
-        allowNullableObject: true,
-        allowNullableBoolean: true,
-        allowNullableString: true,
-        allowNullableNumber: true,
-        allowAny: false
-      }],
+      '@typescript-eslint/strict-boolean-expressions': [
+        'warn',
+        {
+          allowString: true,
+          allowNumber: true,
+          allowNullableObject: true,
+          allowNullableBoolean: true,
+          allowNullableString: true,
+          allowNullableNumber: true,
+          allowAny: false
+        }
+      ],
       '@typescript-eslint/no-unnecessary-condition': 'warn',
 
       // General code quality rules
@@ -78,19 +93,25 @@ export default [
       'no-async-promise-executor': 'error',
       'no-promise-executor-return': 'error',
       'max-depth': ['warn', 4],
-      'max-lines-per-function': ['warn', {
-        max: 200,
-        skipBlankLines: true,
-        skipComments: true
-      }],
-      'complexity': ['warn', 30],
+      'max-lines-per-function': [
+        'warn',
+        {
+          max: 200,
+          skipBlankLines: true,
+          skipComments: true
+        }
+      ],
+      complexity: ['warn', 30],
 
       // Import rules
-      'sort-imports': ['warn', {
-        ignoreCase: true,
-        ignoreDeclarationSort: true,
-        ignoreMemberSort: false
-      }],
+      'sort-imports': [
+        'warn',
+        {
+          ignoreCase: true,
+          ignoreDeclarationSort: true,
+          ignoreMemberSort: false
+        }
+      ],
       'no-duplicate-imports': 'error',
 
       // Formatting (via Prettier)
@@ -109,7 +130,7 @@ export default [
     },
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
-      'complexity': 'off',
+      complexity: 'off',
       'max-lines-per-function': 'off',
       'no-console': 'off',
       'no-undef': 'off'
@@ -134,7 +155,7 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       'max-lines-per-function': 'off',
-      'complexity': 'off',
+      complexity: 'off',
       'require-await': 'off',
       'no-console': 'off',
       'no-promise-executor-return': 'off'
@@ -146,7 +167,7 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       'max-lines-per-function': 'off',
-      'complexity': 'off',
+      complexity: 'off',
       'require-await': 'off'
     }
   },

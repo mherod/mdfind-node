@@ -10,6 +10,73 @@ import {
 const execAsync = promisify(exec)
 
 /**
+ * Coerce a value to a date if the attribute name suggests it contains a date.
+ * @internal
+ */
+function coerceDate(value: string, key: string): Date | null {
+  if (!key.includes('Date') && !key.includes('date')) return null
+  try {
+    const date = new Date(value)
+    if (!isNaN(date.getTime())) {
+      return date
+    }
+  } catch {
+    // Fall through
+  }
+  return null
+}
+
+/**
+ * Coerce a value to a number if the attribute name suggests it contains a numeric value.
+ * @internal
+ */
+function coerceNumber(value: string, key: string): number | null {
+  if (
+    !key.includes('Size') &&
+    !key.includes('Count') &&
+    !key.includes('Number') &&
+    !key.includes('BitRate') &&
+    !key.includes('Duration') &&
+    !key.includes('Height') &&
+    !key.includes('Width') &&
+    !key.includes('Length') &&
+    !key.includes('Speed') &&
+    !key.includes('Time')
+  ) {
+    return null
+  }
+  const num = Number(value)
+  return isNaN(num) ? null : num
+}
+
+/**
+ * Coerce a value to appropriate type based on attribute name and content.
+ * @internal
+ */
+function coerceValue(
+  value: string,
+  key: string
+): string | number | boolean | Date | string[] | null {
+  const cleanValue = value.replace(/^"(.*)"$/, '$1')
+
+  // Try date coercion first
+  const dateValue = coerceDate(cleanValue, key)
+  if (dateValue) return dateValue
+
+  // Try number coercion
+  const numValue = coerceNumber(cleanValue, key)
+  if (numValue !== null) return numValue
+
+  // Handle booleans
+  if (cleanValue === 'true' || cleanValue === 'false') {
+    return cleanValue === 'true'
+  }
+
+  // Keep as string
+  return cleanValue
+}
+
+/**
  * Parse raw mdls output.
  * Raw output concatenates values without separators.
  * We need to match values to the requested attributes in order.
@@ -37,50 +104,7 @@ const parseRawMetadata = (
       const content = value.slice(1, -1).trim()
       result[attr] = content ? content.split(',').map(s => s.trim().replace(/^"(.*)"$/, '$1')) : []
     } else {
-      // Try to coerce types based on attribute name
-      const cleanValue = value.replace(/^"(.*)"$/, '$1')
-
-      // Handle dates
-      if (attr.includes('Date') || attr.includes('date')) {
-        try {
-          const date = new Date(cleanValue)
-          if (!isNaN(date.getTime())) {
-            result[attr] = date
-            continue
-          }
-        } catch {
-          // Fall through to other type checks
-        }
-      }
-
-      // Handle numbers
-      if (
-        attr.includes('Size') ||
-        attr.includes('Count') ||
-        attr.includes('Number') ||
-        attr.includes('BitRate') ||
-        attr.includes('Duration') ||
-        attr.includes('Height') ||
-        attr.includes('Width') ||
-        attr.includes('Length') ||
-        attr.includes('Speed') ||
-        attr.includes('Time')
-      ) {
-        const num = Number(cleanValue)
-        if (!isNaN(num)) {
-          result[attr] = num
-          continue
-        }
-      }
-
-      // Handle booleans
-      if (cleanValue === 'true' || cleanValue === 'false') {
-        result[attr] = cleanValue === 'true'
-        continue
-      }
-
-      // Keep as string
-      result[attr] = cleanValue
+      result[attr] = coerceValue(value, attr)
     }
   }
 
@@ -116,50 +140,7 @@ const parseFormattedMetadata = (output: string): MetadataResult => {
         ? content.split(',').map(s => s.trim().replace(/^"(.*)"$/, '$1'))
         : []
     } else {
-      // Try to coerce types based on attribute name
-      const unquotedValue = cleanValue.replace(/^"(.*)"$/, '$1')
-
-      // Handle dates
-      if (cleanKey.includes('Date') || cleanKey.includes('date')) {
-        try {
-          const date = new Date(unquotedValue)
-          if (!isNaN(date.getTime())) {
-            result[cleanKey] = date
-            continue
-          }
-        } catch {
-          // Fall through to other type checks
-        }
-      }
-
-      // Handle numbers
-      if (
-        cleanKey.includes('Size') ||
-        cleanKey.includes('Count') ||
-        cleanKey.includes('Number') ||
-        cleanKey.includes('BitRate') ||
-        cleanKey.includes('Duration') ||
-        cleanKey.includes('Height') ||
-        cleanKey.includes('Width') ||
-        cleanKey.includes('Length') ||
-        cleanKey.includes('Speed') ||
-        cleanKey.includes('Time')
-      ) {
-        const num = Number(unquotedValue)
-        if (!isNaN(num)) {
-          result[cleanKey] = num
-          continue
-        }
-      }
-
-      // Handle booleans
-      if (unquotedValue === 'true' || unquotedValue === 'false') {
-        result[cleanKey] = unquotedValue === 'true'
-        continue
-      }
-
-      // Keep as string
-      result[cleanKey] = unquotedValue
+      result[cleanKey] = coerceValue(cleanValue, cleanKey)
     }
   }
 
