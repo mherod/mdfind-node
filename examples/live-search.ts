@@ -1,4 +1,4 @@
-import { mdfindLive } from '../src/mdfind.js'
+import { mdfindLive, MdfindError } from '../src/mdfind.js'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -27,9 +27,9 @@ const search = mdfindLive(query, {
     }
     console.log('\nWaiting for changes...')
   },
-  onError: (error) => {
+  onError: (error: MdfindError) => {
     console.error('\nSearch error:', error.message)
-    if (error.stderr) console.error('stderr:', error.stderr)
+    console.error('stderr:', error.stderr)
   },
   onEnd: () => {
     console.log('\nSearch ended')

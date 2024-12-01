@@ -102,10 +102,17 @@ export const MetadataResultSchema = z.record(
   ])
 )
 
+// Error schemas
+export const MdfindErrorSchema = z.object({
+  name: z.literal('MdfindError'),
+  message: z.string(),
+  stderr: z.string()
+}).strict()
+
 // Event schemas
 export const LiveSearchEventsSchema = z.object({
   onResult: z.function().args(z.array(z.string())).returns(z.void()),
-  onError: z.function().args(z.instanceof(Error)).returns(z.void()),
+  onError: z.function().args(MdfindErrorSchema).returns(z.void()),
   onEnd: z.function().returns(z.void()).optional()
 }).strict()
 
@@ -117,4 +124,4 @@ export type MdlsOptions = z.infer<typeof MdlsOptionsSchema>
 export type MdutilOptions = z.infer<typeof MdutilOptionsSchema>
 export type IndexStatus = z.infer<typeof IndexStatusSchema>
 export type MetadataResult = z.infer<typeof MetadataResultSchema>
-export type LiveSearchEvents = z.infer<typeof LiveSearchEventsSchema> 
+export type LiveSearchEvents = z.infer<typeof LiveSearchEventsSchema>
