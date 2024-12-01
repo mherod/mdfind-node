@@ -12,9 +12,10 @@ import {
 const execAsync = promisify(exec)
 
 export class MdfindError extends Error {
+  public readonly name = 'MdfindError' as const
+
   constructor(message: string, public readonly stderr: string) {
     super(message)
-    this.name = 'MdfindError'
   }
 }
 
