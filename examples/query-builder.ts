@@ -55,7 +55,10 @@ async function main() {
       .extension('js')
       .modifiedAfter(new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
 
-    const codeFiles = await mdfind(codeQuery.toString())
+    const codeFiles = await mdfind(codeQuery.toString(), {
+      maxBuffer: 1024 * 1024, // 1MB buffer
+      onlyIn: process.cwd() // Only search in current project
+    })
     console.log(`Found ${codeFiles.length} code files`)
     console.log(
       'First 3:',
