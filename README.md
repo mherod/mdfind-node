@@ -71,7 +71,38 @@ pnpm dev
 
 # Type check
 pnpm typecheck
+
+# Lint code
+pnpm lint
+
+# Fix linting issues
+pnpm lint:fix
+
+# Format code
+pnpm format
+
+# Check formatting
+pnpm format:check
 ```
+
+### Code Quality Tools
+
+This project uses several tools to ensure code quality:
+
+- **TypeScript**: For static type checking
+- **ESLint**: For code linting with TypeScript support
+- **Prettier**: For consistent code formatting
+- **Husky**: For git hooks
+- **lint-staged**: For running linters on staged files
+
+The pre-commit hook automatically runs ESLint and Prettier on staged TypeScript files to ensure code quality and consistency.
+
+### Configuration Files
+
+- `.eslintrc.json`: ESLint configuration with TypeScript and Prettier integration
+- `.prettierrc`: Prettier configuration for code formatting
+- `tsconfig.json`: TypeScript compiler configuration
+- `.husky/pre-commit`: Git pre-commit hook configuration
 
 ## License
 
