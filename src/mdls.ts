@@ -61,6 +61,32 @@ const parseStandardOutput = (output: string): MetadataResult => {
   return MetadataResultSchema.parse(result)
 }
 
+/**
+ * Get metadata for a file using the macOS mdls command.
+ * This function provides low-level access to file metadata attributes.
+ *
+ * @param {string} filePath - The path to the file to analyze
+ * @param {MdlsOptions} [options] - Configuration options for metadata extraction
+ * @returns {Promise<MetadataResult | string[]>} File metadata as an object or array
+ * @throws {Error} If the mdls command fails or the file cannot be accessed
+ *
+ * @example
+ * ```typescript
+ * // Get all metadata
+ * const metadata = await getMetadata('file.jpg')
+ *
+ * // Get specific attributes
+ * const partial = await getMetadata('file.jpg', {
+ *   attributes: ['kMDItemContentType', 'kMDItemPixelHeight']
+ * })
+ *
+ * // Get raw output
+ * const raw = await getMetadata('file.jpg', {
+ *   raw: true,
+ *   nullMarker: '(null)'
+ * })
+ * ```
+ */
 export const getMetadata = async (
   filePath: string,
   options: MdlsOptions = {}

@@ -37,7 +37,30 @@ export interface BatchSearchResult {
 }
 
 /**
- * Run multiple searches in parallel
+ * Run multiple Spotlight searches in parallel.
+ * This is useful when you need to perform several different searches efficiently.
+ *
+ * @param {BatchSearchOptions[]} searches - Array of search configurations
+ * @returns {Promise<BatchSearchResult[]>} Results for each search
+ * @throws {Error} If validation fails for any search options
+ *
+ * @example
+ * ```typescript
+ * const results = await mdfindBatch([
+ *   {
+ *     query: 'kMDItemContentType == "public.image"',
+ *     onlyIn: '~/Pictures'
+ *   },
+ *   {
+ *     query: 'kMDItemContentType == "public.audio"',
+ *     onlyIn: '~/Music'
+ *   }
+ * ])
+ *
+ * for (const result of results) {
+ *   console.log(`Found ${result.results.length} files for ${result.query}`)
+ * }
+ * ```
  */
 export const mdfindBatch = async (searches: BatchSearchOptions[]): Promise<BatchSearchResult[]> => {
   const validatedSearches = searches.map(search => BatchSearchOptionsSchema.parse(search))
@@ -65,7 +88,31 @@ export const mdfindBatch = async (searches: BatchSearchOptions[]): Promise<Batch
 }
 
 /**
- * Run multiple searches in sequence
+ * Run multiple Spotlight searches in sequence.
+ * This is useful when you want to control system load or need results in order.
+ *
+ * @param {BatchSearchOptions[]} searches - Array of search configurations
+ * @returns {Promise<BatchSearchResult[]>} Results for each search
+ * @throws {Error} If validation fails for any search options
+ *
+ * @example
+ * ```typescript
+ * const results = await mdfindSequential([
+ *   {
+ *     query: 'kMDItemContentType == "public.image"',
+ *     onlyIn: '~/Pictures'
+ *   },
+ *   {
+ *     query: 'kMDItemContentType == "public.audio"',
+ *     onlyIn: '~/Music'
+ *   }
+ * ])
+ *
+ * // Results are in the same order as the searches
+ * for (const result of results) {
+ *   console.log(`Found ${result.results.length} files for ${result.query}`)
+ * }
+ * ```
  */
 export const mdfindSequential = async (
   searches: BatchSearchOptions[]
@@ -96,7 +143,26 @@ export const mdfindSequential = async (
 }
 
 /**
- * Run the same search across multiple directories in parallel
+ * Run the same Spotlight search across multiple directories in parallel.
+ * This is useful for searching across different locations with the same criteria.
+ *
+ * @param {string} query - The Spotlight query to execute
+ * @param {string[]} directories - Array of directories to search in
+ * @param {Omit<MdfindOptions, 'onlyIn'>} [options] - Additional search options
+ * @returns {Promise<BatchSearchResult[]>} Results for each directory
+ * @throws {Error} If validation fails for the search options
+ *
+ * @example
+ * ```typescript
+ * const results = await mdfindMultiDirectory(
+ *   'kMDItemContentType == "public.image"',
+ *   ['~/Pictures', '~/Documents', '~/Downloads']
+ * )
+ *
+ * for (const result of results) {
+ *   console.log(`Found ${result.results.length} images in ${result.options.onlyIn}`)
+ * }
+ * ```
  */
 export const mdfindMultiDirectory = async (
   query: string,
@@ -113,7 +179,30 @@ export const mdfindMultiDirectory = async (
 }
 
 /**
- * Run multiple queries against the same directory in parallel
+ * Run multiple Spotlight queries against the same directory in parallel.
+ * This is useful for searching with different criteria in the same location.
+ *
+ * @param {string[]} queries - Array of Spotlight queries to execute
+ * @param {string} [directory] - Optional directory to limit the search to
+ * @param {Omit<MdfindOptions, 'onlyIn'>} [options] - Additional search options
+ * @returns {Promise<BatchSearchResult[]>} Results for each query
+ * @throws {Error} If validation fails for the search options
+ *
+ * @example
+ * ```typescript
+ * const results = await mdfindMultiQuery(
+ *   [
+ *     'kMDItemContentType == "public.image"',
+ *     'kMDItemContentType == "public.audio"',
+ *     'kMDItemContentType == "public.movie"'
+ *   ],
+ *   '~/Downloads'
+ * )
+ *
+ * for (const result of results) {
+ *   console.log(`Found ${result.results.length} files for ${result.query}`)
+ * }
+ * ```
  */
 export const mdfindMultiQuery = async (
   queries: string[],

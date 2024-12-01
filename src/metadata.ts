@@ -13,7 +13,29 @@ import { EXIF_ATTRIBUTE_MAP } from './schemas/metadata/exif.js'
 import { XMP_ATTRIBUTE_MAP } from './schemas/metadata/xmp.js'
 
 /**
- * Get extended metadata for a file
+ * Get extended metadata for a file, including basic file info, EXIF, and XMP data.
+ * This function combines various metadata sources into a comprehensive object.
+ *
+ * @param {string} filePath - The path to the file to analyze
+ * @param {ExtendedMetadataOptions} [options] - Configuration options for metadata extraction
+ * @returns {Promise<ExtendedMetadata>} Comprehensive metadata object
+ * @throws {Error} If metadata extraction fails or the file cannot be accessed
+ *
+ * @example
+ * ```typescript
+ * // Get all metadata
+ * const metadata = await getExtendedMetadata('photo.jpg')
+ * console.log('Camera:', metadata.exif.model)
+ * console.log('Location:', metadata.exif.gpsLatitude, metadata.exif.gpsLongitude)
+ * console.log('Author:', metadata.xmp.creator)
+ *
+ * // Get only specific metadata types
+ * const partial = await getExtendedMetadata('document.pdf', {
+ *   includeBasic: true,
+ *   includeExif: false,
+ *   includeXMP: true
+ * })
+ * ```
  */
 export const getExtendedMetadata = async (
   filePath: string,
@@ -90,7 +112,23 @@ export const getExtendedMetadata = async (
 }
 
 /**
- * Get EXIF data for a file
+ * Get EXIF (Exchangeable Image File Format) data for a file.
+ * This is particularly useful for photos and other image files.
+ *
+ * @param {string} filePath - The path to the file to analyze
+ * @returns {Promise<ExifData>} EXIF metadata
+ * @throws {Error} If metadata extraction fails
+ *
+ * @example
+ * ```typescript
+ * const exif = await getExifData('photo.jpg')
+ * console.log('Camera:', exif.make, exif.model)
+ * console.log('Settings:', {
+ *   iso: exif.isoSpeedRatings,
+ *   aperture: exif.fNumber,
+ *   exposure: exif.exposureTime
+ * })
+ * ```
  */
 export const getExifData = async (filePath: string) => {
   const metadata = await getExtendedMetadata(filePath, {
@@ -102,7 +140,20 @@ export const getExifData = async (filePath: string) => {
 }
 
 /**
- * Get XMP data for a file
+ * Get XMP (Extensible Metadata Platform) data for a file.
+ * XMP provides rich metadata support for various file types.
+ *
+ * @param {string} filePath - The path to the file to analyze
+ * @returns {Promise<XMPData>} XMP metadata
+ * @throws {Error} If metadata extraction fails
+ *
+ * @example
+ * ```typescript
+ * const xmp = await getXMPData('document.pdf')
+ * console.log('Title:', xmp.title)
+ * console.log('Creator:', xmp.creator)
+ * console.log('Keywords:', xmp.subject)
+ * ```
  */
 export const getXMPData = async (filePath: string) => {
   const metadata = await getExtendedMetadata(filePath, {
@@ -114,7 +165,21 @@ export const getXMPData = async (filePath: string) => {
 }
 
 /**
- * Get basic file metadata
+ * Get basic file metadata like name, size, dates, etc.
+ * This is the fastest metadata extraction option.
+ *
+ * @param {string} filePath - The path to the file to analyze
+ * @returns {Promise<BasicMetadata>} Basic file metadata
+ * @throws {Error} If metadata extraction fails
+ *
+ * @example
+ * ```typescript
+ * const info = await getBasicMetadata('file.txt')
+ * console.log('Name:', info.name)
+ * console.log('Size:', info.size)
+ * console.log('Created:', info.created)
+ * console.log('Modified:', info.modified)
+ * ```
  */
 export const getBasicMetadata = async (filePath: string) => {
   const metadata = await getExtendedMetadata(filePath, {

@@ -9,6 +9,10 @@ import {
 
 const execAsync = promisify(exec)
 
+/**
+ * Error class for mdutil-related errors.
+ * Contains information about whether root privileges are required.
+ */
 export class MdutilError extends Error {
   constructor(
     message: string,
@@ -35,7 +39,26 @@ const parseIndexingStatus = (output: string): IndexStatus => {
 }
 
 /**
- * Get the indexing status of a volume
+ * Get the Spotlight indexing status of a volume.
+ * This function checks whether indexing is enabled and provides additional status information.
+ *
+ * @param {string} volumePath - The path to the volume to check
+ * @param {MdutilOptions} [options] - Configuration options
+ * @returns {Promise<IndexStatus>} The indexing status
+ * @throws {MdutilError} If the status check fails
+ *
+ * @example
+ * ```typescript
+ * // Check indexing status
+ * const status = await getIndexingStatus('/')
+ * console.log('Indexing enabled:', status.enabled)
+ * console.log('Last scan:', status.scanBaseTime)
+ *
+ * // Get verbose status
+ * const verbose = await getIndexingStatus('/', { verbose: true })
+ * console.log('Status:', verbose.status)
+ * console.log('Reasoning:', verbose.reasoning)
+ * ```
  */
 export const getIndexingStatus = async (
   volumePath: string,
@@ -58,7 +81,22 @@ export const getIndexingStatus = async (
 }
 
 /**
- * Enable or disable indexing for a volume
+ * Enable or disable Spotlight indexing for a volume.
+ * Some operations may require root privileges.
+ *
+ * @param {string} volumePath - The path to the volume to modify
+ * @param {boolean} enable - Whether to enable or disable indexing
+ * @returns {Promise<void>}
+ * @throws {MdutilError} If the operation fails or requires root privileges
+ *
+ * @example
+ * ```typescript
+ * // Enable indexing
+ * await setIndexing('/', true)
+ *
+ * // Disable indexing
+ * await setIndexing('/Volumes/Backup', false)
+ * ```
  */
 export const setIndexing = async (volumePath: string, enable: boolean): Promise<void> => {
   try {
@@ -76,7 +114,24 @@ export const setIndexing = async (volumePath: string, enable: boolean): Promise<
 }
 
 /**
- * Erase and rebuild the index for a volume
+ * Erase and rebuild the Spotlight index for a volume.
+ * This operation may require root privileges and can take some time to complete.
+ *
+ * @param {string} volumePath - The path to the volume to rebuild
+ * @returns {Promise<void>}
+ * @throws {MdutilError} If the operation fails or requires root privileges
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await eraseAndRebuildIndex('/')
+ *   console.log('Index rebuilt successfully')
+ * } catch (error) {
+ *   if (error instanceof MdutilError && error.requiresRoot) {
+ *     console.log('Root privileges required')
+ *   }
+ * }
+ * ```
  */
 export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> => {
   try {
@@ -91,7 +146,24 @@ export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> =>
 }
 
 /**
- * List the contents of the Spotlight index
+ * List the contents of the Spotlight index.
+ * This operation typically requires root privileges.
+ *
+ * @param {string} volumePath - The path to the volume to inspect
+ * @returns {Promise<string>} The index contents
+ * @throws {MdutilError} If the operation fails or requires root privileges
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   const contents = await listIndexContents('/')
+ *   console.log('Index contents:', contents)
+ * } catch (error) {
+ *   if (error instanceof MdutilError && error.requiresRoot) {
+ *     console.log('Root privileges required')
+ *   }
+ * }
+ * ```
  */
 export const listIndexContents = async (volumePath: string): Promise<string> => {
   try {
@@ -107,7 +179,24 @@ export const listIndexContents = async (volumePath: string): Promise<string> => 
 }
 
 /**
- * Flush local caches to network devices
+ * Flush local caches to network devices.
+ * This operation may require root privileges.
+ *
+ * @param {string} volumePath - The path to the volume to flush
+ * @returns {Promise<void>}
+ * @throws {MdutilError} If the operation fails or requires root privileges
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await flushCaches('/')
+ *   console.log('Caches flushed successfully')
+ * } catch (error) {
+ *   if (error instanceof MdutilError && error.requiresRoot) {
+ *     console.log('Root privileges required')
+ *   }
+ * }
+ * ```
  */
 export const flushCaches = async (volumePath: string): Promise<void> => {
   try {
@@ -122,7 +211,24 @@ export const flushCaches = async (volumePath: string): Promise<void> => {
 }
 
 /**
- * Remove the Spotlight index directory
+ * Remove the Spotlight index directory.
+ * This operation typically requires root privileges.
+ *
+ * @param {string} volumePath - The path to the volume to modify
+ * @returns {Promise<void>}
+ * @throws {MdutilError} If the operation fails or requires root privileges
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await removeIndex('/')
+ *   console.log('Index removed successfully')
+ * } catch (error) {
+ *   if (error instanceof MdutilError && error.requiresRoot) {
+ *     console.log('Root privileges required')
+ *   }
+ * }
+ * ```
  */
 export const removeIndex = async (volumePath: string): Promise<void> => {
   try {
