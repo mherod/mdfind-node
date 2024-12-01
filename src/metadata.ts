@@ -1,6 +1,6 @@
 import { getMetadata } from './mdls.js'
 import { z } from 'zod'
-import { type MetadataResult } from './schemas.js'
+import { type MetadataResult, MetadataResultSchema } from './schemas.js'
 
 // Extended metadata schemas
 export const ExifDataSchema = z
@@ -52,7 +52,7 @@ export const ExtendedMetadataSchema = z
     basic: z.record(z.string(), z.unknown()),
     exif: ExifDataSchema,
     xmp: XMPDataSchema,
-    spotlight: MetadataResult
+    spotlight: MetadataResultSchema
   })
   .strict()
 
