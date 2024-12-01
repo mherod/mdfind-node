@@ -4,6 +4,8 @@ export * from './mdutil.js'
 export * from './mdimport.js'
 export * from './query-builder.js'
 export * from './batch.js'
+export * from './batch-utils.js'
+export * from './live-search.js'
 export { getExtendedMetadata, getExifData, getXMPData, getBasicMetadata } from './metadata.js'
 export {
   type SpotlightContentType,

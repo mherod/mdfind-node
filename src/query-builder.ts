@@ -1,32 +1,34 @@
 import { mdfind } from './mdfind.js'
-import type { MdfindOptions } from './schemas/index.js'
+import type { MdfindOptionsInput } from './schemas/index.js'
 
 /**
  * A fluent interface for building and executing Spotlight queries.
- * Provides a type-safe and intuitive way to construct complex search criteria.
- *
- * The builder supports:
- * - Content type filtering
- * - Metadata attribute matching
- * - File name patterns
- * - Directory scoping
- * - Natural language interpretation
- * - Literal query mode
- * - Custom attribute queries
+ * Provides type-safe methods for constructing complex search criteria.
  *
  * @example
- * Basic usage:
  * ```typescript
- * const files = await new QueryBuilder()
+ * const query = new QueryBuilder()
  *   .contentType('public.image')
- *   .createdAfter('2023-01-01')
  *   .inDirectory('~/Pictures')
+ *   .modifiedAfter(new Date('2024-01-01'))
  *   .execute()
  * ```
  */
 export class QueryBuilder {
   private conditions: string[] = []
-  private options: MdfindOptions = {}
+  private options: MdfindOptionsInput = {
+    live: false,
+    count: false,
+    nullSeparator: false,
+    maxBuffer: 1024 * 1024,
+    reprint: false,
+    literal: false,
+    interpret: false,
+    names: [],
+    attributes: [],
+    onlyInDirectory: undefined,
+    smartFolder: undefined
+  }
   private operator: '&&' | '||' = '&&'
 
   /**
@@ -947,7 +949,6 @@ export class QueryBuilder {
     return result
   }
 }
-
 /**
  * @deprecated Use QueryBuilder instead. SpotlightQuery will be removed in the next major version.
  */

@@ -1,4 +1,3 @@
-// Core types
 export {
   SpotlightContentTypeSchema,
   SpotlightAttributeSchema,
@@ -15,7 +14,6 @@ export {
   type IndexingState
 } from './core/index.js'
 
-// Metadata schemas and types
 export {
   BasicMetadataSchema,
   ExifDataSchema,
@@ -28,23 +26,22 @@ export {
   type ExtendedMetadataOptions
 } from './metadata/index.js'
 
-// Command options schemas and types
 export {
   MdfindOptionsSchema,
+  type MdfindOptionsInput,
+  type MdfindOptions,
   MdlsOptionsSchema,
   MdutilOptionsSchema,
-  type MdfindOptions,
-  type MdlsOptions,
-  type MdutilOptions
-} from './options/index.js'
-
-// Mdimport schemas and types
-export {
   MdimportOptionsSchema,
+  type MdlsOptions,
+  type MdutilOptions,
+  type MdimportOptions
+} from './options.js'
+
+export {
   MdimportResultSchema,
   ImporterInfoSchema,
   AttributeInfoSchema,
-  type MdimportOptions,
   type MdimportResult,
   type ImporterInfo,
   type AttributeInfo

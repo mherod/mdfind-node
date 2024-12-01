@@ -1,12 +1,11 @@
-import { type ChildProcess, exec, spawn } from 'node:child_process'
-import { promisify } from 'node:util'
-import { homedir } from 'os'
+import { Buffer } from 'node:buffer'
+import { spawn } from 'node:child_process'
+import { homedir } from 'node:os'
+import process from 'node:process'
+import { type MdfindOptionsInput, MdfindOptionsSchema } from './schemas/index.js'
+import { validateInput } from './validation.js'
 
-import { type LiveSearchEvents, LiveSearchEventsSchema } from './schemas/core/events.js'
-import { MdfindOptionsSchema } from './schemas/options/index.js'
-import type { MdfindOptions } from './schemas/index.js'
-
-const execAsync = promisify(exec)
+export { mdfindLive } from './live-search.js'
 
 const expandPath = (path: string): string => path.replace(/^~/, homedir())
 
@@ -40,29 +39,18 @@ export class MdfindError extends Error {
   }
 }
 
-/**
- * Validate search options for compatibility.
- * Throws if incompatible options are provided.
- *
- * @internal
- */
-const validateInput = (query: string, options: MdfindOptions): void => {
-  if (options.live && options.count) {
-    throw new Error('Cannot use live and count options together')
-  }
-
-  if (options.literal && options.interpret) {
-    throw new Error('Cannot use literal and interpret options together')
-  }
-
-  if (options.name && !query.trim()) {
-    // When using -name, query is optional
-    return
-  }
-
-  if (!query.trim()) {
-    throw new Error('Query cannot be empty unless using -name option')
-  }
+const DEFAULT_OPTIONS: MdfindOptionsInput = {
+  live: false,
+  count: false,
+  nullSeparator: false,
+  maxBuffer: 1024 * 512,
+  reprint: false,
+  literal: false,
+  interpret: false,
+  names: [],
+  attributes: [],
+  onlyInDirectory: undefined,
+  smartFolder: undefined
 }
 
 /**
@@ -70,7 +58,7 @@ const validateInput = (query: string, options: MdfindOptions): void => {
  * Returns an array of file paths that match the query.
  *
  * @param {string} query - The search query
- * @param {MdfindOptions} options - Search options
+ * @param {MdfindOptionsInput} options - Search options
  * @returns {Promise<string[]>} Array of matching file paths
  * @throws {MdfindError} If the search fails
  *
@@ -91,41 +79,53 @@ const validateInput = (query: string, options: MdfindOptions): void => {
  * })
  * ```
  */
-export const mdfind = async (query: string, options: MdfindOptions = {}): Promise<string[]> => {
-  const validatedOptions = MdfindOptionsSchema.parse(options)
+export async function mdfind(query: string, options: MdfindOptionsInput = {}): Promise<string[]> {
+  if (!query.trim() && (!options.name || options.names?.length === 0)) {
+    throw new Error('Query cannot be empty unless using -name option')
+  }
+
+  const validatedOptions = MdfindOptionsSchema.parse({
+    ...DEFAULT_OPTIONS,
+    ...options
+  })
+
   validateInput(query, validatedOptions)
 
   const args: string[] = []
 
-  if (validatedOptions.onlyIn) {
-    args.push('-onlyin', expandPath(validatedOptions.onlyIn))
+  if (validatedOptions.onlyInDirectory) {
+    args.push('-onlyin', expandPath(validatedOptions.onlyInDirectory))
   }
-  if (validatedOptions.name) {
-    args.push('-name', validatedOptions.name)
+  if (validatedOptions.names.length > 0) {
+    for (const name of validatedOptions.names) {
+      args.push('-name', name)
+    }
   }
-  if (validatedOptions.live) {
-    args.push('-live')
+  if (validatedOptions.attributes.length > 0) {
+    for (const attr of validatedOptions.attributes) {
+      args.push('-attr', attr)
+    }
+  }
+  if (validatedOptions.smartFolder) {
+    args.push('-s', validatedOptions.smartFolder)
+  }
+  if (validatedOptions.nullSeparator) {
+    args.push('-0')
+  }
+  if (validatedOptions.reprint) {
+    args.push('-reprint')
+  }
+  if (validatedOptions.literal) {
+    args.push('-literal')
+  }
+  if (validatedOptions.interpret) {
+    args.push('-interpret')
   }
   if (validatedOptions.count) {
     args.push('-count')
   }
-  if (validatedOptions.attr) {
-    args.push('-attr', validatedOptions.attr)
-  }
-  if (validatedOptions.smartFolder) {
-    args.push('-s', validatedOptions.smartFolder)
-  }
-  if (validatedOptions.nullSeparator) {
-    args.push('-0')
-  }
-  if (validatedOptions.reprint) {
-    args.push('-reprint')
-  }
-  if (validatedOptions.literal) {
-    args.push('-literal')
-  }
-  if (validatedOptions.interpret) {
-    args.push('-interpret')
+  if (validatedOptions.live) {
+    args.push('-live')
   }
 
   const trimmedQuery = query.trim()
@@ -133,86 +133,85 @@ export const mdfind = async (query: string, options: MdfindOptions = {}): Promis
     args.push(trimmedQuery)
   }
 
-  try {
-    const { stdout, stderr } = await execAsync(`mdfind ${args.map(arg => `"${arg}"`).join(' ')}`, {
-      maxBuffer: options.maxBuffer ?? 1024 * 1024 * 10 // 10MB default buffer
+  const child = spawn('mdfind', args, { env: process.env })
+
+  return new Promise((resolve, reject) => {
+    const results: string[] = []
+    let buffer = ''
+
+    child.stdout.on('data', (data: Buffer) => {
+      buffer += data.toString()
+      const lines = buffer.split(validatedOptions.nullSeparator ? '\0' : '\n')
+      buffer = lines.pop() ?? ''
+      results.push(...lines.filter(Boolean))
     })
 
-    // mdfind sometimes outputs locale loading messages to stderr, which aren't errors
-    if (stderr && !stderr.includes('[UserQueryParser] Loading keywords')) {
-      throw new MdfindError('mdfind command failed', stderr)
-    }
+    child.stderr.on('data', (data: Buffer) => {
+      const stderr = data.toString()
+      // Ignore locale loading messages
+      if (!stderr.includes('[UserQueryParser] Loading keywords')) {
+        reject(new MdfindError('mdfind command failed', stderr))
+      }
+    })
 
-    // Split by newline or null character based on options
-    const separator = options.nullSeparator ? '\0' : '\n'
-    return stdout.trim().split(separator).filter(Boolean)
-  } catch (error) {
-    if (error instanceof Error) {
-      // Define a type for the error object that includes stderr
-      type ExecError = Error & { stderr?: string }
-      throw new MdfindError(error.message, (error as ExecError).stderr ?? '')
-    }
-    throw error
-  }
+    child.on('close', (code: number) => {
+      if (code !== 0) {
+        reject(new MdfindError('mdfind exited with non-zero code', ''))
+        return
+      }
+      if (buffer) {
+        results.push(buffer)
+      }
+      resolve(results)
+    })
+
+    child.on('error', error => {
+      reject(new MdfindError(error.message, ''))
+    })
+  })
 }
 
 /**
- * Execute a live Spotlight search that monitors for changes in real-time.
- * Returns a ChildProcess that can be killed to stop monitoring.
+ * Execute a Spotlight search and return only the count of matches.
  *
- * @param {string} query - The search query
- * @param {MdfindOptions} options - Search options
- * @param {LiveSearchEvents} events - Event handlers for results and errors
- * @returns {ChildProcess} The search process
+ * @param {string} query - The Spotlight query to execute
+ * @param {MdfindOptionsInput} [options] - Search configuration options
+ * @returns {Promise<number>} Number of files matching the query
  *
  * @example
  * ```typescript
- * const search = mdfindLive('kind:image', {
- *   onlyIn: '~/Pictures'
- * }, {
- *   onResult: paths => console.log('Found:', paths),
- *   onError: error => console.error('Error:', error),
- *   onEnd: () => console.log('Search ended')
- * })
- *
- * // Stop the search after 10 seconds
- * setTimeout(() => search.kill(), 10000)
+ * const count = await mdfindCount('kind:image')
+ * console.log(`Found ${count} images`)
  * ```
  */
-export const mdfindLive = (
+export async function mdfindCount(
   query: string,
-  options: MdfindOptions = {},
-  events: LiveSearchEvents
-): ChildProcess => {
-  const validatedOptions = { ...options, live: true }
-  const validatedEvents = LiveSearchEventsSchema.parse(events)
+  options: MdfindOptionsInput = {}
+): Promise<number> {
+  const validatedOptions = MdfindOptionsSchema.parse({
+    ...DEFAULT_OPTIONS,
+    ...options,
+    count: true
+  })
   validateInput(query, validatedOptions)
 
-  const args: string[] = ['-live']
+  const args: string[] = ['-count']
 
-  if (validatedOptions.onlyIn) {
-    args.push('-onlyin', expandPath(validatedOptions.onlyIn))
+  if (validatedOptions.onlyInDirectory) {
+    args.push('-onlyin', expandPath(validatedOptions.onlyInDirectory))
   }
-  if (validatedOptions.name) {
-    args.push('-name', validatedOptions.name)
+  if (validatedOptions.names.length > 0) {
+    for (const name of validatedOptions.names) {
+      args.push('-name', name)
+    }
   }
-  if (validatedOptions.attr) {
-    args.push('-attr', validatedOptions.attr)
+  if (validatedOptions.attributes.length > 0) {
+    for (const attr of validatedOptions.attributes) {
+      args.push('-attr', attr)
+    }
   }
   if (validatedOptions.smartFolder) {
     args.push('-s', validatedOptions.smartFolder)
-  }
-  if (validatedOptions.nullSeparator) {
-    args.push('-0')
-  }
-  if (validatedOptions.reprint) {
-    args.push('-reprint')
-  }
-  if (validatedOptions.literal) {
-    args.push('-literal')
-  }
-  if (validatedOptions.interpret) {
-    args.push('-interpret')
   }
 
   const trimmedQuery = query.trim()
@@ -220,44 +219,38 @@ export const mdfindLive = (
     args.push(trimmedQuery)
   }
 
-  let buffer = ''
-  const child = spawn('mdfind', args)
+  const child = spawn('mdfind', args, { env: process.env })
 
-  child.stdout.setEncoding('utf8')
-  child.stderr.setEncoding('utf8')
+  return new Promise((resolve, reject) => {
+    let output = ''
 
-  child.stdout.on('data', (data: string) => {
-    buffer += data
-    const separator = validatedOptions.nullSeparator ? '\0' : '\n'
-    const lines = buffer.split(separator)
+    child.stdout.on('data', (data: Buffer) => {
+      output += data.toString()
+    })
 
-    // Keep the last incomplete line in the buffer
-    buffer = lines.pop() ?? ''
-
-    const paths = lines.filter(Boolean)
-    if (paths.length > 0) {
-      validatedEvents.onResult(paths)
-    }
-  })
-
-  child.stderr.on('data', (data: string) => {
-    // Ignore locale loading messages
-    if (!data.includes('[UserQueryParser] Loading keywords')) {
-      validatedEvents.onError(new MdfindError('mdfind command failed', data))
-    }
-  })
-
-  child.on('close', () => {
-    // Process any remaining data in the buffer
-    if (buffer) {
-      const separator = validatedOptions.nullSeparator ? '\0' : '\n'
-      const paths = buffer.split(separator).filter(Boolean)
-      if (paths.length > 0) {
-        validatedEvents.onResult(paths)
+    child.stderr.on('data', (data: Buffer) => {
+      const stderr = data.toString()
+      // Ignore locale loading messages
+      if (!stderr.includes('[UserQueryParser] Loading keywords')) {
+        reject(new MdfindError('mdfind command failed', stderr))
       }
-    }
-    validatedEvents.onEnd?.()
-  })
+    })
 
-  return child
+    child.on('close', (code: number) => {
+      if (code !== 0) {
+        reject(new MdfindError('mdfind exited with non-zero code', ''))
+        return
+      }
+      const count = parseInt(output.trim(), 10)
+      if (isNaN(count)) {
+        reject(new MdfindError('Failed to parse count from mdfind output', output))
+        return
+      }
+      resolve(count)
+    })
+
+    child.on('error', error => {
+      reject(new MdfindError(error.message, ''))
+    })
+  })
 }

@@ -37,20 +37,65 @@ export const MdimportDebugLevel = {
  */
 export const MdimportOptionsSchema = z
   .object({
-    /** Test import without storing in index */
+    /**
+     * Test import without storing in index
+     * When true, the import is simulated and attributes are returned without modifying the index
+     * @default false
+     */
     test: z.boolean().default(false),
-    /** Debug level (requires test mode) */
+
+    /**
+     * Debug level (requires test mode)
+     * - 1: Print summary of test import
+     * - 2: Print summary and all attributes (except kMDItemTextContent)
+     * - 3: Print summary and all attributes (including kMDItemTextContent)
+     */
     debugLevel: z.enum(['1', '2', '3']).optional(),
-    /** Output file for test results */
+
+    /**
+     * Output file for test results (requires test mode)
+     */
     outputFile: z.string().optional(),
-    /** Show performance information (requires test mode) */
+
+    /**
+     * Show performance information (requires test mode)
+     * @default false
+     */
     showPerformance: z.boolean().default(false),
-    /** Maximum buffer size for output */
+
+    /**
+     * Maximum buffer size for output
+     * @default 512KB
+     */
     maxBuffer: z.number().default(1024 * 512),
-    /** Force immediate indexing */
-    immediate: z.boolean().default(false)
+
+    /**
+     * Force immediate indexing
+     * Note: This is the default behavior if no other flags are specified
+     * @default true
+     */
+    immediate: z.boolean().default(true),
+
+    /**
+     * Recursively import directories
+     * Note: This is always true for directory imports
+     * @default true
+     */
+    recursive: z.boolean().default(true)
   })
   .strict()
+  .refine(
+    data => {
+      // If not in test mode, these options shouldn't be used
+      if (!data.test) {
+        return !data.debugLevel && !data.outputFile && !data.showPerformance
+      }
+      return true
+    },
+    {
+      message: 'Debug level, output file, and performance options require test mode (-t)'
+    }
+  )
 
 export type MdimportOptions = z.input<typeof MdimportOptionsSchema>
 
@@ -60,6 +105,27 @@ export type MdimportOptions = z.input<typeof MdimportOptionsSchema>
  * @param options Import options
  * @returns The command output as a string
  * @throws {MdimportError} If the import fails
+ *
+ * @example
+ * Import a file:
+ * ```typescript
+ * await mdimport('document.pdf')
+ * ```
+ *
+ * @example
+ * Test import with debug info:
+ * ```typescript
+ * await mdimport('document.pdf', {
+ *   test: true,
+ *   debugLevel: '2'
+ * })
+ * ```
+ *
+ * @example
+ * Recursive directory import:
+ * ```typescript
+ * await mdimport('~/Documents')
+ * ```
  */
 export async function mdimport(
   paths: string | string[],
@@ -68,9 +134,8 @@ export async function mdimport(
   const opts = MdimportOptionsSchema.parse(options)
   const args: string[] = []
 
-  if (opts.immediate) {
-    args.push('-i')
-  } else if (opts.test) {
+  // Handle test mode and its dependent options
+  if (opts.test) {
     args.push('-t')
     if (opts.debugLevel) {
       args.push('-d', opts.debugLevel)
@@ -82,6 +147,10 @@ export async function mdimport(
       args.push('-p')
     }
   }
+  // Handle immediate mode (default if no other flags)
+  else if (opts.immediate) {
+    args.push('-i')
+  }
 
   const pathArray = Array.isArray(paths) ? paths : [paths]
   args.push(...pathArray)
@@ -91,7 +160,9 @@ export async function mdimport(
       maxBuffer: opts.maxBuffer
     })
 
-    if (stderr) {
+    // Some stderr output is informational (like locale loading)
+    const isError = stderr !== '' && !stderr.includes('Loading keywords')
+    if (isError) {
       throw new MdimportError('mdimport command failed', stderr)
     }
 
@@ -113,6 +184,12 @@ export async function mdimport(
  * List all installed Spotlight importers
  * @returns Array of importer paths
  * @throws {MdimportError} If the command fails
+ *
+ * @example
+ * ```typescript
+ * const importers = await listImporters()
+ * console.log('Found importers:', importers)
+ * ```
  */
 export async function listImporters(): Promise<string[]> {
   try {
@@ -139,6 +216,12 @@ export async function listImporters(): Promise<string[]> {
  * List all available Spotlight attributes and their localizations
  * @returns Array of attribute descriptions
  * @throws {MdimportError} If the command fails
+ *
+ * @example
+ * ```typescript
+ * const attributes = await listAttributes()
+ * console.log('Available attributes:', attributes)
+ * ```
  */
 export async function listAttributes(): Promise<string[]> {
   try {
@@ -165,6 +248,12 @@ export async function listAttributes(): Promise<string[]> {
  * Print the Spotlight schema
  * @returns Schema XML as a string
  * @throws {MdimportError} If the command fails
+ *
+ * @example
+ * ```typescript
+ * const schema = await getSchema()
+ * console.log('Spotlight schema:', schema)
+ * ```
  */
 export async function getSchema(): Promise<string> {
   try {
@@ -189,6 +278,11 @@ export async function getSchema(): Promise<string> {
  * @param importerPath Path to the importer (e.g., /System/Library/Spotlight/Chat.mdimporter)
  * @returns Command output
  * @throws {MdimportError} If the command fails
+ *
+ * @example
+ * ```typescript
+ * await reimportForImporter('/System/Library/Spotlight/Chat.mdimporter')
+ * ```
  */
 export async function reimportForImporter(importerPath: string): Promise<string> {
   try {

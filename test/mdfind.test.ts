@@ -1,18 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { homedir } from 'node:os'
 import { mdfind, MdfindError } from '../src/mdfind.js'
-import type { ChildProcess, ExecException } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
+import { EventEmitter } from 'node:events'
+import { Buffer } from 'node:buffer'
 
-// Mock child_process.exec
+// Mock child_process.spawn
 vi.mock('node:child_process', () => ({
-  exec: vi.fn()
+  spawn: vi.fn()
 }))
 
-type ExecCallback = (
-  error: ExecException | null,
-  result: { stdout: string; stderr: string }
-) => void
-type ExecOptions = { maxBuffer?: number }
+class MockChildProcess extends EventEmitter {
+  public stdout = new EventEmitter()
+  public stderr = new EventEmitter()
+}
 
 describe('mdfind', () => {
   beforeEach(() => {
@@ -21,87 +22,87 @@ describe('mdfind', () => {
 
   describe('command building', () => {
     it('should build basic command', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      await mdfind('test query')
-      expect(exec).toHaveBeenCalledWith(
-        'mdfind "test query"',
-        expect.objectContaining({ maxBuffer: expect.any(Number) }),
-        expect.any(Function)
+      const promise = mdfind('test query')
+      mockProcess.stdout.emit('data', Buffer.from(''))
+      mockProcess.emit('close', 0)
+
+      await promise
+      expect(spawn).toHaveBeenCalledWith(
+        'mdfind',
+        ['test query'],
+        expect.objectContaining({ env: expect.any(Object) })
       )
     })
 
     it('should add onlyIn option with expanded path', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      await mdfind('test query', { onlyIn: '~/Documents' })
-      expect(exec).toHaveBeenCalledWith(
-        `mdfind "-onlyin" "${homedir()}/Documents" "test query"`,
-        expect.objectContaining({ maxBuffer: expect.any(Number) }),
-        expect.any(Function)
+      const promise = mdfind('test query', { onlyIn: '~/Documents' })
+      mockProcess.stdout.emit('data', Buffer.from(''))
+      mockProcess.emit('close', 0)
+
+      await promise
+      expect(spawn).toHaveBeenCalledWith(
+        'mdfind',
+        ['-onlyin', `${homedir()}/Documents`, 'test query'],
+        expect.objectContaining({ env: expect.any(Object) })
       )
     })
 
     it('should add name option', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      await mdfind('test query', { name: '*.pdf' })
-      expect(exec).toHaveBeenCalledWith(
-        'mdfind "-name" "*.pdf" "test query"',
-        expect.objectContaining({ maxBuffer: expect.any(Number) }),
-        expect.any(Function)
+      const promise = mdfind('test query', { name: '*.pdf' })
+      mockProcess.stdout.emit('data', Buffer.from(''))
+      mockProcess.emit('close', 0)
+
+      await promise
+      expect(spawn).toHaveBeenCalledWith(
+        'mdfind',
+        ['-name', '*.pdf', 'test query'],
+        expect.objectContaining({ env: expect.any(Object) })
       )
     })
 
     it('should add live option', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      await mdfind('test query', { live: true })
-      expect(exec).toHaveBeenCalledWith(
-        'mdfind "-live" "test query"',
-        expect.objectContaining({ maxBuffer: expect.any(Number) }),
-        expect.any(Function)
+      const promise = mdfind('test query', { live: true })
+      mockProcess.stdout.emit('data', Buffer.from(''))
+      mockProcess.emit('close', 0)
+
+      await promise
+      expect(spawn).toHaveBeenCalledWith(
+        'mdfind',
+        ['-live', 'test query'],
+        expect.objectContaining({ env: expect.any(Object) })
       )
     })
 
     it('should add count option', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '42', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      const result = await mdfind('test query', { count: true })
-      expect(exec).toHaveBeenCalledWith(
-        'mdfind "-count" "test query"',
-        expect.objectContaining({ maxBuffer: expect.any(Number) }),
-        expect.any(Function)
+      const promise = mdfind('test query', { count: true })
+      mockProcess.stdout.emit('data', Buffer.from('42'))
+      mockProcess.emit('close', 0)
+
+      const result = await promise
+      expect(spawn).toHaveBeenCalledWith(
+        'mdfind',
+        ['-count', 'test query'],
+        expect.objectContaining({ env: expect.any(Object) })
       )
       expect(result).toEqual(['42'])
     })
@@ -109,29 +110,27 @@ describe('mdfind', () => {
 
   describe('error handling', () => {
     it('should handle command execution errors', async () => {
-      const { exec } = await import('node:child_process')
-      const error = new Error('Command failed') as ExecException
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(error, { stdout: '', stderr: 'Command failed' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      await expect(mdfind('test query')).rejects.toThrow(MdfindError)
+      const promise = mdfind('test query')
+      mockProcess.stderr.emit('data', Buffer.from('Command failed'))
+      mockProcess.emit('close', 1)
+
+      await expect(promise).rejects.toThrow(MdfindError)
     })
 
     it('should handle invalid options', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      // @ts-expect-error Testing invalid option
-      await expect(mdfind('test query', { invalidOption: true })).rejects.toThrow()
+      const promise = mdfind('test query', { invalidOption: true } as any)
+      mockProcess.stderr.emit('data', Buffer.from('Invalid option'))
+      mockProcess.emit('close', 1)
+
+      await expect(promise).rejects.toThrow(MdfindError)
     })
 
     it('should handle empty query', async () => {
@@ -141,42 +140,41 @@ describe('mdfind', () => {
 
   describe('output parsing', () => {
     it('should parse file list output', async () => {
-      const { exec } = await import('node:child_process')
-      const mockOutput = '/path/to/file1\n/path/to/file2\n/path/to/file3'
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: mockOutput, stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      const result = await mdfind('test query')
+      const promise = mdfind('test query')
+      mockProcess.stdout.emit('data', Buffer.from('/path/to/file1\n/path/to/file2\n/path/to/file3'))
+      mockProcess.emit('close', 0)
+
+      const result = await promise
       expect(result).toEqual(['/path/to/file1', '/path/to/file2', '/path/to/file3'])
     })
 
     it('should handle empty output', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      const result = await mdfind('test query')
+      const promise = mdfind('test query')
+      mockProcess.stdout.emit('data', Buffer.from(''))
+      mockProcess.emit('close', 0)
+
+      const result = await promise
       expect(result).toEqual([])
     })
 
     it('should parse count output', async () => {
-      const { exec } = await import('node:child_process')
-      vi.mocked(exec).mockImplementation(
-        (cmd: string, opts: ExecOptions, callback: ExecCallback) => {
-          callback(null, { stdout: '42', stderr: '' })
-          return {} as ChildProcess
-        }
-      )
+      const { spawn } = await import('node:child_process')
+      const mockProcess = new MockChildProcess()
+      vi.mocked(spawn).mockReturnValue(mockProcess as unknown as ChildProcess)
 
-      const result = await mdfind('test query', { count: true })
+      const promise = mdfind('test query', { count: true })
+      mockProcess.stdout.emit('data', Buffer.from('42'))
+      mockProcess.emit('close', 0)
+
+      const result = await promise
       expect(result).toEqual(['42'])
     })
   })

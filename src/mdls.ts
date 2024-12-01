@@ -1,11 +1,18 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import {
+  type ExtendedMetadata,
+  ExtendedMetadataSchema,
   type MdlsOptions,
   MdlsOptionsSchema,
   type MetadataResult,
   MetadataResultSchema
 } from './schemas/index.js'
+import {
+  transformBasicMetadata,
+  transformExifMetadata,
+  transformXMPMetadata
+} from './schemas/metadata/transform.js'
 
 const execAsync = promisify(exec)
 
@@ -156,19 +163,41 @@ const parseFormattedMetadata = (output: string): MetadataResult => {
  *   - attributes: List of specific attributes to retrieve
  *   - raw: Return raw attribute values without parsing
  *   - nullMarker: String to use for null values
+ *   - structured: Return metadata in structured format (basic, EXIF, XMP)
  *
- * @returns {Promise<MetadataResult>}
- *   Object mapping attribute names to parsed values
+ * @returns {Promise<MetadataResult | ExtendedMetadata>}
+ *   Object mapping attribute names to parsed values, or structured metadata
  *
  * @throws {Error}
  *   - If the file doesn't exist
  *   - If the file can't be read
  *   - If mdls command fails
+ *
+ * @example
+ * Get raw metadata:
+ * ```typescript
+ * const metadata = await getMetadata('photo.jpg')
+ * console.log(metadata.kMDItemPixelHeight)
+ * ```
+ *
+ * @example
+ * Get structured metadata:
+ * ```typescript
+ * const metadata = await getMetadata('photo.jpg', { structured: true })
+ * console.log(metadata.basic.name)
+ * console.log(metadata.exif.focalLength)
+ * console.log(metadata.xmp.creator)
+ * ```
  */
 export const getMetadata = async (
   filePath: string,
-  options: MdlsOptions = {}
-): Promise<MetadataResult> => {
+  options: MdlsOptions = {
+    attributes: [],
+    raw: false,
+    nullMarker: '(null)',
+    structured: false
+  }
+): Promise<MetadataResult | ExtendedMetadata> => {
   const validatedOptions = MdlsOptionsSchema.parse(options)
   const args: string[] = []
 
@@ -190,11 +219,20 @@ export const getMetadata = async (
   try {
     const { stdout } = await execAsync(`mdls ${args.map(arg => `"${arg}"`).join(' ')}`)
 
-    if (validatedOptions.raw) {
-      return parseRawMetadata(stdout, validatedOptions.attributes)
+    const rawMetadata = validatedOptions.raw
+      ? parseRawMetadata(stdout, validatedOptions.attributes)
+      : parseFormattedMetadata(stdout)
+
+    if (validatedOptions.structured) {
+      return ExtendedMetadataSchema.parse({
+        basic: transformBasicMetadata(rawMetadata),
+        exif: transformExifMetadata(rawMetadata),
+        xmp: transformXMPMetadata(rawMetadata),
+        spotlight: rawMetadata
+      })
     }
 
-    return parseFormattedMetadata(stdout)
+    return rawMetadata
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to get metadata: ${error.message}`)
