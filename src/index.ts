@@ -5,17 +5,61 @@ import { homedir } from 'os'
 
 const execAsync = promisify(exec)
 
-// Common Spotlight metadata attributes
-export type MetadataAttribute =
-  | 'kMDItemAuthors'
-  | 'kMDItemContentType'
-  | 'kMDItemContentTypeTree'
-  | 'kMDItemCreator'
+// Common content types
+export type SpotlightContentType =
+  | 'public.audio'
+  | 'public.image'
+  | 'public.movie'
+  | 'public.pdf'
+  | 'public.plain-text'
+  | 'public.rtf'
+  | 'public.html'
+  | 'public.font'
+  | string // Allow custom content types
+
+// Common metadata attributes
+export type SpotlightAttribute =
+  // General attributes
   | 'kMDItemDisplayName'
   | 'kMDItemFSName'
+  | 'kMDItemPath'
+  | 'kMDItemContentType'
+  | 'kMDItemContentTypeTree'
   | 'kMDItemKind'
   | 'kMDItemLastUsedDate'
-  | 'kMDItemTextContent'
+  | 'kMDItemContentCreationDate'
+  | 'kMDItemContentModificationDate'
+  // Document attributes
+  | 'kMDItemTitle'
+  | 'kMDItemAuthors'
+  | 'kMDItemComment'
+  | 'kMDItemCopyright'
+  | 'kMDItemKeywords'
+  | 'kMDItemNumberOfPages'
+  | 'kMDItemLanguages'
+  // Media attributes
+  | 'kMDItemDurationSeconds'
+  | 'kMDItemCodecs'
+  | 'kMDItemPixelHeight'
+  | 'kMDItemPixelWidth'
+  | 'kMDItemAudioBitRate'
+  | 'kMDItemAudioChannelCount'
+  | 'kMDItemTotalBitRate'
+  // Image specific
+  | 'kMDItemOrientation'
+  | 'kMDItemFlashOnOff'
+  | 'kMDItemFocalLength'
+  | 'kMDItemAcquisitionMake'
+  | 'kMDItemAcquisitionModel'
+  | 'kMDItemISOSpeed'
+  | 'kMDItemExposureTimeSeconds'
+  // Location attributes
+  | 'kMDItemLatitude'
+  | 'kMDItemLongitude'
+  | 'kMDItemAltitude'
+  | 'kMDItemCity'
+  | 'kMDItemStateOrProvince'
+  | 'kMDItemCountry'
   | string // Allow custom attributes
 
 export interface MdfindOptions {
@@ -23,11 +67,13 @@ export interface MdfindOptions {
   name?: string
   live?: boolean
   count?: boolean
-  attr?: MetadataAttribute
+  attr?: SpotlightAttribute
   smartFolder?: string
   nullSeparator?: boolean
   maxBuffer?: number
   reprint?: boolean
+  literal?: boolean
+  interpret?: boolean
 }
 
 export interface LiveSearchEvents {
@@ -50,6 +96,10 @@ const validateInput = (query: string, options: MdfindOptions) => {
 
   if (options.reprint && !options.live) {
     throw new Error('reprint option requires live option')
+  }
+
+  if (options.literal && options.interpret) {
+    throw new Error('Cannot use literal and interpret options together')
   }
 
   if (options.name && !query.trim().length) {
@@ -82,6 +132,8 @@ export const mdfind = async (query: string, options: MdfindOptions = {}): Promis
   if (options.smartFolder) args.push('-s', options.smartFolder)
   if (options.nullSeparator) args.push('-0')
   if (options.reprint) args.push('-reprint')
+  if (options.literal) args.push('-literal')
+  if (options.interpret) args.push('-interpret')
 
   // Add the query at the end if it's not empty
   if (query.trim().length) {
@@ -125,6 +177,8 @@ export const mdfindLive = (
   if (options.smartFolder) args.push('-s', options.smartFolder)
   if (options.nullSeparator) args.push('-0')
   if (options.reprint) args.push('-reprint')
+  if (options.literal) args.push('-literal')
+  if (options.interpret) args.push('-interpret')
 
   // Always add live for this function
   args.push('-live')
