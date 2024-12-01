@@ -17,6 +17,8 @@ A powerful Node.js wrapper for macOS's Spotlight search (`mdfind`), bringing sys
 - 📝 **Rich Metadata** - Access EXIF, XMP, and system metadata
 - 💪 **Type-Safe** - Full TypeScript support with detailed types
 - 🛠️ **Configurable** - Extensive options for fine-tuned control
+- 🌳 **Type Trees** - Support for content type hierarchies
+- 🎨 **Specialized Methods** - Purpose-built methods for common file types
 
 ## 📥 Installation
 
@@ -53,13 +55,11 @@ const photos = await mdfind('kMDItemContentType == "public.image"', {
 import { QueryBuilder } from 'mdfind-node'
 
 const query = new QueryBuilder()
-  .contentType('public.image')
-  .createdAfter('2023-01-01')
-  .hasGPS()
-  .inDirectory('~/Pictures')
+  .isText()                    // Find text-based content
+  .extension('md')             // Markdown files
+  .modifiedAfter('2024-01-01') // Modified this year
+  .inDirectory('~/Documents')   // In Documents folder
   .execute()
-
-const highResPhotos = await mdfind(query.toString())
 ```
 
 ## 🎯 Key Features
@@ -100,6 +100,33 @@ console.log('EXIF:', metadata.exif)
 console.log('XMP:', metadata.xmp)
 ```
 
+### 🎯 Specialized Search Methods
+
+```typescript
+import { QueryBuilder } from 'mdfind-node'
+
+// Find text-based files
+const textFiles = await new QueryBuilder()
+  .isText()
+  .execute()
+
+// Find audiovisual content
+const mediaFiles = await new QueryBuilder()
+  .isAudiovisual()
+  .execute()
+
+// Find application bundles
+const apps = await new QueryBuilder()
+  .isBundle()
+  .inDirectory('/Applications')
+  .execute()
+
+// Find Markdown files
+const docs = await new QueryBuilder()
+  .isMarkdown()
+  .execute()
+```
+
 ## 🔍 Attribute Discovery
 
 Spotlight attributes can be complex to work with. This library provides utilities to help you discover and understand available attributes:
@@ -132,18 +159,56 @@ console.log(contentTypes['public.image']) // 'Image files (JPEG, PNG, etc.)'
 const locationAttrs = getAttributesByCategory('location')
 ```
 
+### Content Type Trees
+
+Files in macOS are organized in a type hierarchy. For example:
+
+```
+public.item
+└── public.content
+    ├── public.text
+    │   ├── public.plain-text
+    │   └── net.daringfireball.markdown
+    └── public.audiovisual-content
+        ├── public.audio
+        └── public.movie
+```
+
 ### Common Content Types
 
+Basic Types:
+- `public.item` - Base type for all items
+- `public.content` - Base type for all content
+- `public.text` - Text-based content
+- `public.composite-content` - Content with multiple parts
+
+Documents:
+- `public.plain-text` - Plain text files
+- `public.rtf` - Rich Text Format documents
+- `com.adobe.pdf` - Adobe PDF Document
+- `net.daringfireball.markdown` - Markdown Document
+
+Media:
 - `public.image` - Image files (JPEG, PNG, etc.)
 - `public.audio` - Audio files (MP3, WAV, etc.)
 - `public.movie` - Video files (MP4, MOV, etc.)
-- `public.pdf` - PDF documents
-- `public.plain-text` - Plain text files
-- `public.folder` - Folders/Directories
+- `public.audiovisual-content` - Audio/Visual content
+
+Code:
+- `public.source-code` - Source Code File
+- `public.shell-script` - Shell Script
+- `public.json` - JSON File
+- `public.yaml` - YAML File
+
+System:
+- `com.apple.bundle` - Generic Bundle
+- `com.apple.application` - Generic Application
+- `com.apple.property-list` - Property List (plist)
 
 ### Common Attributes
 
 - `kMDItemContentType` - The type of content
+- `kMDItemContentTypeTree` - The content type hierarchy
 - `kMDItemDisplayName` - The display name of the file
 - `kMDItemFSName` - The filename on disk
 - `kMDItemContentCreationDate` - When the file was created
@@ -166,9 +231,13 @@ pnpm dev
 pnpm build
 
 # Run examples
-pnpm example       # Basic example
-pnpm example:live  # Live search example
-pnpm example:query # Query builder example
+pnpm example           # Basic example
+pnpm example:live      # Live search example
+pnpm example:query     # Query builder example
+pnpm example:metadata  # Metadata example
+pnpm example:batch     # Batch operations example
+pnpm example:discover  # Attribute discovery example
+pnpm example:types     # Content type example
 ```
 
 ## 📄 License
