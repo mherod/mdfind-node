@@ -117,76 +117,55 @@ export class QueryBuilder {
   /**
    * Filter by creation date.
    *
-   * @param {string | Date} date - Date string or Date object
+   * @param {Date} date - Date to compare against
    * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .createdAfter('2023-01-01')
-   *   .execute()
-   * ```
    */
-  public createdAfter(date: string | Date): this {
-    const timestamp = new Date(date).getTime() / 1000
-    this.conditions.push(`kMDItemContentCreationDate > $time.iso(${timestamp})`)
+  public createdAfter(date: Date): this {
+    this.conditions.push(`kMDItemContentCreationDate > "${date.toISOString()}"`)
     return this
   }
 
   /**
    * Filter by creation date.
    *
-   * @param {string | Date} date - Date string or Date object
+   * @param {Date} date - Date to compare against
    * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .createdBefore('2023-12-31')
-   *   .execute()
-   * ```
    */
-  public createdBefore(date: string | Date): this {
-    const timestamp = new Date(date).getTime() / 1000
-    this.conditions.push(`kMDItemContentCreationDate < $time.iso(${timestamp})`)
+  public createdBefore(date: Date): this {
+    this.conditions.push(`kMDItemContentCreationDate < "${date.toISOString()}"`)
     return this
   }
 
   /**
    * Filter by modification date.
    *
-   * @param {string | Date} date - Date string or Date object
+   * @param {Date} date - Date to compare against
    * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .modifiedAfter('2023-01-01')
-   *   .execute()
-   * ```
    */
-  public modifiedAfter(date: string | Date): this {
-    const timestamp = new Date(date).getTime() / 1000
-    this.conditions.push(`kMDItemContentModificationDate > $time.iso(${timestamp})`)
+  public modifiedAfter(date: Date): this {
+    this.conditions.push(`kMDItemContentModificationDate > "${date.toISOString()}"`)
     return this
   }
 
   /**
    * Filter by modification date.
    *
-   * @param {string | Date} date - Date string or Date object
+   * @param {Date} date - Date to compare against
    * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .modifiedBefore('2023-12-31')
-   *   .execute()
-   * ```
    */
-  public modifiedBefore(date: string | Date): this {
-    const timestamp = new Date(date).getTime() / 1000
-    this.conditions.push(`kMDItemContentModificationDate < $time.iso(${timestamp})`)
+  public modifiedBefore(date: Date): this {
+    this.conditions.push(`kMDItemContentModificationDate < "${date.toISOString()}"`)
+    return this
+  }
+
+  /**
+   * Filter by last opened date.
+   *
+   * @param {Date} date - Date to compare against
+   * @returns {this} The builder instance for chaining
+   */
+  public lastOpenedAfter(date: Date): this {
+    this.conditions.push(`kMDItemLastUsedDate > "${date.toISOString()}"`)
     return this
   }
 
@@ -959,12 +938,12 @@ export class QueryBuilder {
   }
 
   /**
-   * Execute the search with the current conditions and options.
-   * @returns {Promise<string[]>} Array of file paths matching the query
+   * Execute the query and return the results
+   *
+   * @returns {Promise<string[]>} Array of matching file paths
    */
   public async execute(): Promise<string[]> {
-    const query = this.toString()
-    return mdfind(query, this.options)
+    return mdfind(this.toString(), this.options)
   }
 }
 

@@ -115,6 +115,16 @@ export default [
     }
   },
   {
+    files: ['test/**/*.ts', '*.config.ts'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      'max-lines-per-function': 'off',
+      'complexity': 'off',
+      'require-await': 'off'
+    }
+  },
+  {
     ignores: ['dist/**', 'node_modules/**', '*.js']
   }
 ]

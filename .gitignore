@@ -3,3 +3,11 @@ dist/
 .DS_Store
 *.log
 .eslintcache
+.pnpm-store/
+coverage/
+.idea/
+.vscode/
+*.sublime-*
+*.swp
+*.swo
+Thumbs.db
