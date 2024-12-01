@@ -24,6 +24,7 @@
     "example:live": "tsx examples/live-search.ts",
     "example:advanced": "tsx examples/advanced.ts",
     "example:metadata": "tsx examples/metadata.ts",
+    "example:query": "tsx examples/query-builder.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"examples/**/*.ts\"",
