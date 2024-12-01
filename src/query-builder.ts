@@ -813,6 +813,159 @@ export class QueryBuilder {
   async execute(): Promise<string[]> {
     return mdfind(this.toString(), this.options)
   }
+
+  /**
+   * Filter for any text-based content.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const textFiles = await new QueryBuilder()
+   *   .isText()
+   *   .execute()
+   * ```
+   */
+  isText(): this {
+    this.conditions.push('kMDItemContentTypeTree == "public.text"')
+    return this
+  }
+
+  /**
+   * Filter for composite content (documents with multiple parts).
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const compositeFiles = await new QueryBuilder()
+   *   .isComposite()
+   *   .execute()
+   * ```
+   */
+  isComposite(): this {
+    this.conditions.push('kMDItemContentTypeTree == "public.composite-content"')
+    return this
+  }
+
+  /**
+   * Filter for audiovisual content.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const mediaFiles = await new QueryBuilder()
+   *   .isAudiovisual()
+   *   .execute()
+   * ```
+   */
+  isAudiovisual(): this {
+    this.conditions.push('kMDItemContentTypeTree == "public.audiovisual-content"')
+    return this
+  }
+
+  /**
+   * Filter for bundles (apps, frameworks, plugins).
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const bundles = await new QueryBuilder()
+   *   .isBundle()
+   *   .execute()
+   * ```
+   */
+  isBundle(): this {
+    this.conditions.push('kMDItemContentTypeTree == "com.apple.bundle"')
+    return this
+  }
+
+  /**
+   * Filter for Markdown documents.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const markdownFiles = await new QueryBuilder()
+   *   .isMarkdown()
+   *   .execute()
+   * ```
+   */
+  isMarkdown(): this {
+    this.conditions.push('kMDItemContentType == "net.daringfireball.markdown"')
+    return this
+  }
+
+  /**
+   * Filter for property list files.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const plists = await new QueryBuilder()
+   *   .isPlist()
+   *   .execute()
+   * ```
+   */
+  isPlist(): this {
+    this.conditions.push('kMDItemContentType == "com.apple.property-list"')
+    return this
+  }
+
+  /**
+   * Filter for Adobe PDF documents.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const pdfs = await new QueryBuilder()
+   *   .isPDF()
+   *   .execute()
+   * ```
+   */
+  isPDF(): this {
+    this.conditions.push('kMDItemContentType == "com.adobe.pdf"')
+    return this
+  }
+
+  /**
+   * Filter for JSON files.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const jsonFiles = await new QueryBuilder()
+   *   .isJSON()
+   *   .execute()
+   * ```
+   */
+  isJSON(): this {
+    this.conditions.push('kMDItemContentType == "public.json"')
+    return this
+  }
+
+  /**
+   * Filter for YAML files.
+   *
+   * @returns {this} The builder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * const yamlFiles = await new QueryBuilder()
+   *   .isYAML()
+   *   .execute()
+   * ```
+   */
+  isYAML(): this {
+    this.conditions.push('kMDItemContentType == "public.yaml"')
+    return this
+  }
 }
 
 /**

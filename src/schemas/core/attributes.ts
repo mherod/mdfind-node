@@ -103,44 +103,74 @@ export const AttributeDefinitionSchema = z.object({
  * ```
  */
 export const CONTENT_TYPES = {
+  'public.item': 'Base type for all items',
+  'public.content': 'Base type for all content',
+  'public.data': 'Generic data files',
+  'public.text': 'Text-based content',
+  'public.composite-content': 'Content with multiple parts',
+
+  // Images
   'public.image': 'Image files (JPEG, PNG, etc.)',
+  'public.jpeg': 'JPEG Image',
+  'public.png': 'PNG Image',
+  'public.heic': 'HEIC Image',
+  'com.apple.icns': 'Apple Icon Image',
+
+  // Audio/Video
   'public.audio': 'Audio files (MP3, WAV, etc.)',
   'public.movie': 'Video files (MP4, MOV, etc.)',
-  'public.pdf': 'PDF documents',
+  'public.audiovisual-content': 'Audio/Visual content',
+  'public.mp3': 'MP3 Audio',
+  'public.mp4': 'MP4 Video',
+  'public.mpeg-4': 'MPEG-4 Media',
+  'public.mpeg-2-transport-stream': 'MPEG-2 Transport Stream',
+  'com.apple.quicktime-movie': 'QuickTime Movie',
+
+  // Documents
   'public.plain-text': 'Plain text files',
   'public.rtf': 'Rich Text Format documents',
   'public.html': 'HTML documents',
   'public.xml': 'XML documents',
-  'public.archive': 'Archive files (ZIP, etc.)',
-  'public.data': 'Generic data files',
-  'public.folder': 'Folders/Directories',
-  'public.executable': 'Executable files',
-  'public.font': 'Font files',
-  'com.apple.application-bundle': 'macOS Application Bundle',
-  'com.apple.application-file': 'macOS Application File',
-  'com.apple.package': 'macOS Package Bundle',
-  'com.apple.systempreference': 'System Preference',
-  'com.apple.plugin': 'Plugin Bundle',
-  'com.apple.framework': 'Framework Bundle',
-  'com.apple.property-list': 'Property List (plist)',
-  'com.apple.mail.emlx': 'Apple Mail Message',
-  'com.apple.icns': 'Apple Icon Image',
-  'com.apple.keynote.key': 'Keynote Presentation',
-  'com.apple.numbers.numbers': 'Numbers Spreadsheet',
-  'com.apple.pages.pages': 'Pages Document',
+  'public.pdf': 'PDF documents',
+  'com.adobe.pdf': 'Adobe PDF Document',
+  'net.daringfireball.markdown': 'Markdown Document',
+
+  // Code
   'public.source-code': 'Source Code File',
   'public.shell-script': 'Shell Script',
   'public.swift-source': 'Swift Source File',
   'public.python-script': 'Python Script',
   'public.json': 'JSON File',
   'public.yaml': 'YAML File',
-  'public.jpeg': 'JPEG Image',
-  'public.png': 'PNG Image',
-  'public.heic': 'HEIC Image',
-  'public.mp3': 'MP3 Audio',
-  'public.mp4': 'MP4 Video',
-  'public.mpeg-4': 'MPEG-4 Media',
-  'com.apple.quicktime-movie': 'QuickTime Movie'
+
+  // Bundles and Packages
+  'public.directory': 'Directory/Folder',
+  'public.folder': 'Folders/Directories',
+  'com.apple.bundle': 'Generic Bundle',
+  'com.apple.package': 'macOS Package Bundle',
+  'com.apple.application': 'Generic Application',
+  'com.apple.application-bundle': 'macOS Application Bundle',
+  'com.apple.application-file': 'macOS Application File',
+  'com.apple.localizable-name-bundle': 'Bundle with Localizable Name',
+
+  // System
+  'public.executable': 'Executable files',
+  'com.apple.property-list': 'Property List (plist)',
+  'com.apple.systempreference': 'System Preference',
+  'com.apple.plugin': 'Plugin Bundle',
+  'com.apple.framework': 'Framework Bundle',
+
+  // Archives and Data
+  'public.archive': 'Archive files (ZIP, etc.)',
+  'public.font': 'Font files',
+
+  // Apple iWork
+  'com.apple.keynote.key': 'Keynote Presentation',
+  'com.apple.numbers.numbers': 'Numbers Spreadsheet',
+  'com.apple.pages.pages': 'Pages Document',
+
+  // Mail
+  'com.apple.mail.emlx': 'Apple Mail Message'
 } as const
 
 // Common Spotlight attributes with descriptions
