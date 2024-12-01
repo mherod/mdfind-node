@@ -1,4 +1,4 @@
-name: Lint
+name: Lint & Format
 
 on:
   push:
@@ -6,10 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+# Prevent multiple runs of the same workflow on a PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
-    name: Run ESLint and Prettier
+    name: ESLint & Prettier
     runs-on: macos-latest
+    timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +47,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run ESLint
-        run: pnpm lint
-
       - name: Check formatting
+        id: format
         run: pnpm format:check
+        continue-on-error: true
+
+      - name: Run ESLint
+        id: lint
+        run: pnpm lint
+        continue-on-error: true
+
+      - name: Report status
+        if: always()
+        run: |
+          if [ "${{ steps.format.outcome }}" == "failure" ] || [ "${{ steps.lint.outcome }}" == "failure" ]; then
+            echo "::error::Code quality checks failed!"
+            echo "::error::Formatting check status: ${{ steps.format.outcome }}"
+            echo "::error::Lint check status: ${{ steps.lint.outcome }}"
+            echo "Run 'pnpm format' and 'pnpm lint:fix' locally to fix issues."
+            exit 1
+          fi
