@@ -172,6 +172,54 @@ query.contentType('public.image').largerThan(1024 * 1024) // AND
 query.useOperator('||').extension('jpg').extension('png') // OR
 ```
 
+### Logical Operators
+
+The Query Builder provides fluent methods for combining conditions with logical operators:
+
+```typescript
+// Using AND operator
+query
+  .extension('jpg')
+  .and()
+  .largerThan(1024 * 1024)
+
+// Using OR operator
+query.extension('jpg').or().extension('png')
+
+// Grouping conditions
+query
+  .group()
+  .extension('jpg')
+  .or()
+  .extension('png')
+  .endGroup()
+  .and()
+  .largerThan(1024 * 1024)
+
+// Nested groups with mixed operators
+query
+  .group()
+  .contentType('public.image')
+  .and()
+  .group()
+  .extension('jpg')
+  .or()
+  .extension('png')
+  .endGroup()
+  .endGroup()
+  .and()
+  .largerThan(1024 * 1024)
+```
+
+Methods for logical operations:
+
+- `and()` - Use AND operator (&&) for the next condition
+- `or()` - Use OR operator (||) for the next condition
+- `group()` - Start a new group of conditions
+- `endGroup()` - End the current group of conditions
+
+Groups allow you to control operator precedence and create complex queries with proper logical structure.
+
 ## Live Search
 
 ```typescript
@@ -265,14 +313,69 @@ const systemPrefs = await new QueryBuilder()
   .execute()
 ```
 
+### Find Photos by Multiple Cameras
+
+```typescript
+const photos = await new QueryBuilder()
+  .contentType('public.image')
+  .and()
+  .minImageDimensions(3000, 2000)
+  .and()
+  .group()
+  .takenWith('Canon')
+  .or()
+  .takenWith('Sony')
+  .endGroup()
+  .execute()
+```
+
+### Multi-Format Document Search
+
+```typescript
+const docs = await new QueryBuilder()
+  .group()
+  .isPDF()
+  .or()
+  .isMarkdown()
+  .or()
+  .isText()
+  .endGroup()
+  .and()
+  .group()
+  .hasKeyword('typescript')
+  .or()
+  .hasKeyword('javascript')
+  .endGroup()
+  .execute()
+```
+
+### Audio Files by Multiple Artists
+
+```typescript
+const tracks = await new QueryBuilder()
+  .contentType('public.audio')
+  .and()
+  .minAudioQuality(44100, 320000)
+  .and()
+  .group()
+  .author('Radiohead')
+  .or()
+  .author('Pink Floyd')
+  .or()
+  .author('The Beatles')
+  .endGroup()
+  .execute()
+```
+
 ## Best Practices
 
 1. Use specialized type methods (`isPDF()`, `isMarkdown()`) instead of raw content types when available
 2. Set appropriate buffer sizes for large result sets
 3. Use `live` search with timeout for real-time updates
-4. Combine conditions logically with `useOperator()`
-5. Use `interpret()` for natural language queries
-6. Set directory scope with `inDirectory()` to limit search space
+4. Use `group()` and `endGroup()` to control operator precedence
+5. Use `and()` and `or()` for clear logical combinations
+6. Use `interpret()` for natural language queries
+7. Set directory scope with `inDirectory()` to limit search space
 
 ## See Also
 

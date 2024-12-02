@@ -17,7 +17,7 @@ A powerful Node.js wrapper for macOS's Spotlight search (`mdfind`), bringing sys
 - 📝 **Rich Metadata** - Access EXIF, XMP, and system metadata
 - 💪 **Type-Safe** - Full TypeScript support with detailed types
 - 🛠️ **Configurable** - Extensive options for fine-tuned control
-- 🌳 **Type Trees** - Support for content type hierarchies
+- �� **Type Trees** - Support for content type hierarchies
 - 🎨 **Specialized Methods** - Purpose-built methods for common file types
 
 ## 📥 Documentation
@@ -82,37 +82,66 @@ The QueryBuilder provides a fluent, type-safe API for building complex searches:
 ```typescript
 import { QueryBuilder } from 'mdfind-node'
 
-// Find documents by author
+// Find documents by multiple authors
 const authorDocs = await new QueryBuilder()
-  .contentType('com.adobe.pdf')
+  .isPDF()
+  .and()
+  .group()
   .author('John Doe')
+  .or()
+  .author('Jane Smith')
+  .endGroup()
+  .and()
   .createdAfter(new Date('2024-01-01'))
   .inDirectory('~/Documents')
   .execute()
 
-// Find photos from a specific camera
+// Find photos from multiple cameras
 const cameraPhotos = await new QueryBuilder()
   .contentType('public.image')
-  .takenWith('iPhone 14 Pro')
+  .and()
   .hasGPS()
-  .inDirectory('~/Pictures')
+  .and()
+  .group()
+  .takenWith('iPhone 14 Pro')
+  .or()
+  .takenWith('Canon EOS R5')
+  .endGroup()
   .execute()
 
 // Find code files with specific content
 const codeFiles = await new QueryBuilder()
-  .isText()
+  .group()
   .extension('ts')
+  .or()
+  .extension('tsx')
+  .endGroup()
+  .and()
+  .group()
   .containing('QueryBuilder')
+  .or()
+  .containing('mdfind')
+  .endGroup()
   .modifiedAfter(new Date('2024-01-01'))
   .execute()
 
-// Combine conditions with OR
+// Find media files with complex conditions
 const mediaFiles = await new QueryBuilder()
-  .useOperator('||')
+  .group()
   .extension('mp4')
+  .or()
   .extension('mov')
+  .or()
   .extension('avi')
+  .endGroup()
+  .and()
   .largerThan(50 * 1024 * 1024)
+  .and()
+  .group()
+  .hasKeyword('vacation')
+  .or()
+  .hasKeyword('family')
+  .endGroup()
   .execute()
 ```
 
