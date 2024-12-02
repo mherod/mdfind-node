@@ -49,11 +49,12 @@ export async function getExifData(filePath: string): Promise<ExifData> {
  */
 export async function getXMPData(filePath: string): Promise<XMPData> {
   const metadata = await getMetadata(filePath)
-  const authors = metadata.kMDItemAuthors as string[] | undefined
   return XMPDataSchema.parse({
     title: metadata.kMDItemTitle,
     description: metadata.kMDItemDescription,
-    creator: authors?.[0],
+    creator: Array.isArray(metadata.kMDItemAuthors)
+      ? metadata.kMDItemAuthors[0]
+      : metadata.kMDItemAuthors,
     subject: metadata.kMDItemKeywords,
     createDate: metadata.kMDItemContentCreationDate,
     modifyDate: metadata.kMDItemContentModificationDate,
