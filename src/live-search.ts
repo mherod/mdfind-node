@@ -1,17 +1,15 @@
 import { Buffer } from 'node:buffer'
 import { type ChildProcess, spawn } from 'node:child_process'
-import { homedir } from 'node:os'
 import process from 'node:process'
+import { MdfindError } from './mdfind.js'
 import {
   type LiveSearchEvents,
   LiveSearchEventsSchema,
   type MdfindOptionsInput,
   MdfindOptionsSchema
 } from './schemas/index.js'
+import { expandPath } from './utils/index.js'
 import { validateInput } from './validation.js'
-import { MdfindError } from './mdfind.js'
-
-const expandPath = (path: string): string => path.replace(/^~/, homedir())
 
 const DEFAULT_OPTIONS: MdfindOptionsInput = {
   live: false,

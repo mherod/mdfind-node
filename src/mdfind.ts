@@ -1,18 +1,11 @@
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
-import { homedir } from 'node:os'
 import process from 'node:process'
-import { type MdfindOptionsInput, MdfindOptionsSchema } from './schemas/index.js'
+import { type MdfindOptionsInput, MdfindOptionsOutputSchema } from './schemas/index.js'
+import { expandPath } from './utils/index.js'
 import { validateInput } from './validation.js'
 
 export { mdfindLive } from './live-search.js'
-
-/**
- * Expands ~ to the user's home directory in paths
- */
-function expandPath(path: string): string {
-  return path.replace(/^~/, homedir())
-}
 
 /**
  * Builds command line arguments for mdfind based on options
@@ -20,24 +13,27 @@ function expandPath(path: string): string {
 function buildMdfindArgs(query: string, options: MdfindOptionsInput): string[] {
   const args: string[] = []
 
-  if (options.onlyInDirectory) {
+  // Handle name options first
+  if (options.name) {
+    args.push('-name', options.name)
+  }
+  for (const name of options.names ?? []) {
+    args.push('-name', name)
+  }
+
+  // Handle path options
+  if (options.onlyIn) {
+    args.push('-onlyin', expandPath(options.onlyIn))
+  } else if (options.onlyInDirectory) {
     args.push('-onlyin', expandPath(options.onlyInDirectory))
   }
 
-  // Handle name options
-  const names = options.names ?? []
-  if (names.length > 0) {
-    for (const name of names) {
-      args.push('-name', name)
-    }
-  }
-
   // Handle attribute options
-  const attributes = options.attributes ?? []
-  if (attributes.length > 0) {
-    for (const attr of attributes) {
-      args.push('-attr', attr)
-    }
+  if (options.attr) {
+    args.push('-attr', options.attr)
+  }
+  for (const attr of options.attributes ?? []) {
+    args.push('-attr', attr)
   }
 
   if (options.smartFolder) {
@@ -62,6 +58,7 @@ function buildMdfindArgs(query: string, options: MdfindOptionsInput): string[] {
     args.push('-live')
   }
 
+  // Add query last
   const trimmedQuery = query.trim()
   if (trimmedQuery) {
     args.push(trimmedQuery)
@@ -94,9 +91,7 @@ const DEFAULT_OPTIONS: MdfindOptionsInput = {
   literal: false,
   interpret: false,
   names: [],
-  attributes: [],
-  onlyInDirectory: undefined,
-  smartFolder: undefined
+  attributes: []
 }
 
 /**
@@ -105,7 +100,7 @@ const DEFAULT_OPTIONS: MdfindOptionsInput = {
  */
 export function mdfind(query: string, options: MdfindOptionsInput = {}): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    const validatedOptions = MdfindOptionsSchema.parse({ ...DEFAULT_OPTIONS, ...options })
+    const validatedOptions = MdfindOptionsOutputSchema.parse({ ...DEFAULT_OPTIONS, ...options })
     validateInput(query, validatedOptions)
 
     const args = buildMdfindArgs(query, validatedOptions)
@@ -138,7 +133,7 @@ export function mdfind(query: string, options: MdfindOptionsInput = {}): Promise
  */
 export function mdfindCount(query: string, options: MdfindOptionsInput = {}): Promise<number> {
   return new Promise((resolve, reject) => {
-    const validatedOptions = MdfindOptionsSchema.parse({
+    const validatedOptions = MdfindOptionsOutputSchema.parse({
       ...DEFAULT_OPTIONS,
       ...options,
       count: true
