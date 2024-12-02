@@ -1,4 +1,5 @@
-import { QueryBuilder } from '../src/query-builder.js'
+/* eslint-disable no-console */
+import { QueryBuilder } from 'mdfind-node'
 import { homedir } from 'os'
 import { join } from 'path'
 

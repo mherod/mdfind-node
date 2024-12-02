@@ -1,11 +1,7 @@
-import {
-  discoverAttributes,
-  getAttributesByCategory,
-  getContentTypes,
-  searchAttributes
-} from '../src/discover.js'
+/* eslint-disable no-console */
+import { getAttributesByCategory, getContentTypes, searchAttributes } from 'mdfind-node'
 
-function main(): Promise<void> {
+async function main(): Promise<void> {
   try {
     // Example 1: List all known content types
     console.log('\n1. Available content types:')
@@ -19,9 +15,6 @@ function main(): Promise<void> {
     const imageAttrs = searchAttributes('image')
     imageAttrs.forEach(attr => {
       console.log(`- ${attr.name}: ${attr.description}`)
-      if (attr.example != null) {
-        console.log(`  Example: ${JSON.stringify(attr.example)}`)
-      }
     })
 
     // Example 3: Get all location-related attributes
@@ -29,33 +22,10 @@ function main(): Promise<void> {
     const locationAttrs = getAttributesByCategory('location')
     locationAttrs.forEach(attr => {
       console.log(`- ${attr.name}: ${attr.description}`)
-      if (attr.example != null) {
-        console.log(`  Example: ${JSON.stringify(attr.example)}`)
-      }
     })
 
-    // Example 4: Discover attributes for a specific file
-    console.log('\n4. Discovering attributes for a system file:')
-    try {
-      const systemFile = '~/Library/Preferences/com.apple.finder.plist'
-      const fileAttrs = discoverAttributes(systemFile)
-      const entries = Object.entries(fileAttrs)
-      if (entries.length > 0) {
-        entries.slice(0, 10).forEach(([name, description]) => {
-          console.log(`- ${name}: ${description}`)
-        })
-        if (entries.length > 10) {
-          console.log(`... and ${entries.length - 10} more attributes`)
-        }
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        console.log('Could not read system file:', error.message)
-      }
-    }
-
-    // Example 5: List all known attributes by category
-    console.log('\n5. All known attributes by category:')
+    // Example 4: List attributes by category
+    console.log('\n4. Attributes by category:')
     const categories = ['general', 'document', 'media', 'image', 'audio', 'location'] as const
     for (const category of categories) {
       const attrs = getAttributesByCategory(category)
@@ -66,13 +36,9 @@ function main(): Promise<void> {
         })
       }
     }
-    return Promise.resolve()
   } catch (error) {
-    return Promise.reject(error)
+    console.error('Error:', error)
   }
 }
 
-void main().catch((error: unknown) => {
-  console.error('Unhandled error:', error)
-  process.exit(1)
-})
+void main().catch(err => console.error('Unhandled error:', err))

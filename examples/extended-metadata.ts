@@ -1,4 +1,5 @@
-import { getBasicMetadata, getExifData, getExtendedMetadata, getXMPData } from '../src/metadata.js'
+/* eslint-disable no-console */
+import { getBasicMetadata, getExifData, getExtendedMetadata, getXMPData } from 'mdfind-node'
 
 async function main() {
   try {

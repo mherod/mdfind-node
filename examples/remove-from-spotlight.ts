@@ -1,13 +1,8 @@
 /* eslint-disable no-console */
+import { getIndexedEntries, getIndexingStatus, type MdutilError, setIndexing } from 'mdfind-node'
 import { existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import {
-  getIndexedEntries,
-  getIndexingStatus,
-  type MdutilError,
-  setIndexing
-} from '../src/mdutil.js'
 
 const logger = {
   log: (message: string) => console.log(message),

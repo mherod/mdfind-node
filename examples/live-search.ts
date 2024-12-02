@@ -1,4 +1,5 @@
-import { MdfindError, mdfindLive } from '../src/mdfind.js'
+/* eslint-disable no-console */
+import { MdfindError, mdfindLive } from 'mdfind-node'
 import { homedir } from 'os'
 import { join } from 'path'
 

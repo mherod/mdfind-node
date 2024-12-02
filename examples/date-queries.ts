@@ -21,7 +21,7 @@ import {
   subWeeks,
   subYears
 } from 'date-fns'
-import { QueryBuilder } from '../src/query-builder.js'
+import { QueryBuilder } from 'mdfind-node'
 
 /**
  * Enhanced QueryBuilder with date-fns integration

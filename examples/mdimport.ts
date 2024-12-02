@@ -1,116 +1,94 @@
+/* eslint-disable no-console */
 import {
-  mdimport,
-  listImporters,
-  listAttributes,
   getSchema,
-  reimportForImporter,
-  MdimportError
-} from '../src/mdimport.js'
+  listAttributes,
+  listImporters,
+  mdimport,
+  MdimportError,
+  reimportForImporter
+} from 'mdfind-node'
 import { homedir } from 'os'
 import { join } from 'path'
-import { writeFile } from 'fs/promises'
 
-async function main() {
+async function main(): Promise<void> {
   try {
-    // Example 1: List installed importers
-    console.log('\n1. Listing installed Spotlight importers:')
+    // Example 1: List available importers
+    console.log('\n1. Available importers:')
     const importers = await listImporters()
-    console.log('Found', importers.length, 'importers:')
+    console.log('First 5 importers:')
     importers.slice(0, 5).forEach(importer => {
-      console.log('-', importer)
+      console.log(`- ${importer}`)
     })
-    if (importers.length > 5) {
-      console.log(`... and ${importers.length - 5} more`)
-    }
 
-    // Example 2: Test import a file
-    console.log('\n2. Testing import of package.json:')
+    // Example 2: Import a single file
+    console.log('\n2. Importing a single file:')
     const testResult = await mdimport('package.json', {
       test: true,
-      debugLevel: '2',
-      showPerformance: true
+      debugLevel: '2'
     })
-    console.log('Import test result:', testResult)
+    console.log('Import result:', testResult)
 
     // Example 3: List available attributes
-    console.log('\n3. Listing available Spotlight attributes:')
+    console.log('\n3. Available attributes:')
     const attributes = await listAttributes()
-    console.log('Found', attributes.length, 'attributes:')
+    console.log('First 5 attributes:')
     attributes.slice(0, 5).forEach(attr => {
-      console.log('-', attr)
+      console.log(`- ${attr}`)
     })
-    if (attributes.length > 5) {
-      console.log(`... and ${attributes.length - 5} more`)
-    }
 
     // Example 4: Get schema information
-    console.log('\n4. Getting Spotlight schema:')
+    console.log('\n4. Schema information:')
     const schema = await getSchema()
-    console.log('Schema excerpt (first 500 chars):')
-    console.log(schema.slice(0, 500), '...')
+    console.log('Schema:', schema)
 
-    // Example 5: Import a directory
-    console.log('\n5. Importing a directory:')
-    const importResult = await mdimport(process.cwd(), {
-      test: true, // Using test mode to avoid modifying index
-      debugLevel: '1'
-    })
-    console.log('Directory import result:', importResult)
-
-    // Example 6: Reimport files for a specific importer
-    console.log('\n6. Reimporting files for Chat importer:')
+    // Example 5: Import files with specific importer
+    console.log('\n5. Import files with specific importer:')
+    const chatImporter = 'System/Library/Spotlight/Chat.mdimporter'
     try {
-      const chatImporter = '/System/Library/Spotlight/Chat.mdimporter'
       const reimportResult = await reimportForImporter(chatImporter)
       console.log('Reimport result:', reimportResult)
     } catch (error) {
       if (error instanceof MdimportError) {
-        console.log('Failed to reimport Chat files:', error.message)
-        if (error.requiresRoot) {
-          console.log('Root privileges required')
-        }
+        console.log('Import error:', error.message)
+      } else {
+        throw error
       }
     }
 
-    // Example 7: Import with output file
-    console.log('\n7. Importing with output file:')
-    const outputPath = join(homedir(), 'Desktop', 'mdimport-test.txt')
+    // Example 6: Import with output options
+    console.log('\n6. Import with output options:')
     const outputResult = await mdimport('package.json', {
       test: true,
       debugLevel: '3',
-      outputFile: outputPath
+      outputFile: 'mdimport-output.txt'
     })
-    console.log('Import with output file result:', outputResult)
-    console.log('Results written to:', outputPath)
+    console.log('Output result:', outputResult)
 
-    // Example 8: Immediate indexing of a new file
-    console.log('\n8. Immediate indexing of a new file:')
-    const testFilePath = join(process.cwd(), 'test-file.txt')
+    // Example 7: Import multiple files
+    console.log('\n7. Import multiple files:')
+    const files = ['package.json', 'tsconfig.json']
+    const multipleResult = await Promise.all(files.map(file => mdimport(file, { test: true })))
+    console.log('Multiple import result:', multipleResult)
+
+    // Example 8: Import files recursively
+    console.log('\n8. Import files recursively:')
+    const testFilePath = join(homedir(), 'Documents')
     try {
-      // Create a test file
-      await writeFile(testFilePath, 'Test content for immediate indexing', 'utf-8')
-      console.log('Created test file:', testFilePath)
-
-      // Force immediate indexing
-      const immediateResult = await mdimport(testFilePath, {
-        immediate: true
+      const recursiveResult = await mdimport(testFilePath, {
+        test: true,
+        recursive: true
       })
-      console.log('Immediate indexing result:', immediateResult)
+      console.log('Recursive import result:', recursiveResult)
     } catch (error) {
       if (error instanceof MdimportError) {
-        console.log('Failed to perform immediate indexing:', error.message)
-        if (error.requiresRoot) {
-          console.log('Root privileges required')
-        }
+        console.log('Import error:', error.message)
+      } else {
+        throw error
       }
     }
   } catch (error) {
     console.error('Error:', error)
-    process.exit(1)
   }
 }
 
-void main().catch(error => {
-  console.error('Unhandled error:', error)
-  process.exit(1)
-})
+void main().catch(err => console.error('Unhandled error:', err))

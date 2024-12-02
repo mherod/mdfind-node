@@ -1,4 +1,5 @@
-import { mdfind, MdfindError } from '../src/mdfind.js'
+/* eslint-disable no-console */
+import { mdfind, MdfindError } from 'mdfind-node'
 
 async function main() {
   try {
