@@ -46,9 +46,10 @@ const handleRelativeDate = (str: string): Date => {
   }
 
   const relativeMatch = lowerStr.match(/^(\d+)\s+(days?|weeks?|months?|years?)\s+ago$/i)
-  if (!relativeMatch) return new Date(str)
+  if (!relativeMatch?.[1] || !relativeMatch[2]) return new Date(str)
 
-  const [, amount, unit] = relativeMatch
+  const amount = relativeMatch[1]
+  const unit = relativeMatch[2]
   const num = parseInt(amount, 10)
 
   const unitHandlers = {
@@ -58,7 +59,7 @@ const handleRelativeDate = (str: string): Date => {
     year: () => date.setFullYear(date.getFullYear() - num)
   }
 
-  const baseUnit = unit?.replace(/s$/, '') as keyof typeof unitHandlers
+  const baseUnit = unit.replace(/s$/, '') as keyof typeof unitHandlers
   unitHandlers[baseUnit]()
 
   return date
@@ -68,7 +69,7 @@ const handleTimestamp = (num: number): Date => new Date(num < 1e12 ? num * 1000 
 
 const handleArrayItem = (item: Date | string | number): Date => {
   if (item instanceof Date) return item
-  if (typeof item === 'string') return new Date(item)
+  if (typeof item === 'string') return handleRelativeDate(item)
   return handleTimestamp(item)
 }
 
