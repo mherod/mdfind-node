@@ -6,13 +6,34 @@ export default defineConfig({
   base: '/mdfind-node/',
   ignoreDeadLinks: true,
   lastUpdated: true,
+  appearance: true,
+
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['meta', { name: 'theme-color', content: '#2563eb' }],
+    ['meta', { name: 'og:type', content: 'website' }],
+    ['meta', { name: 'og:locale', content: 'en' }],
+    ['meta', { name: 'og:site_name', content: 'mdfind-node' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+    [
+      'link',
+      {
+        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+        rel: 'stylesheet'
+      }
+    ]
+  ],
+
   themeConfig: {
+    logo: '/logo.svg',
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/' },
       { text: 'Examples', link: '/examples/' },
       { text: 'API', link: '/api/' }
     ],
+
     sidebar: [
       {
         text: 'Getting Started',
@@ -57,28 +78,37 @@ export default defineConfig({
         ]
       }
     ],
+
     socialLinks: [{ icon: 'github', link: 'https://github.com/mherod/mdfind-node' }],
+
     footer: {
       message: 'Released under the MIT License.',
       copyright: 'Copyright © 2024-present Matthew Herod'
     },
+
     search: {
-      provider: 'local'
+      provider: 'local',
+      options: {
+        detailedView: true
+      }
     },
-    outline: [2, 3],
+
+    outline: {
+      level: [2, 3],
+      label: 'On this page'
+    },
+
     lastUpdated: {
       text: 'Updated at',
       formatOptions: {
         dateStyle: 'full',
         timeStyle: 'medium'
       }
+    },
+
+    editLink: {
+      pattern: 'https://github.com/mherod/mdfind-node/edit/main/docs/:path',
+      text: 'Edit this page on GitHub'
     }
-  },
-  head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
-    ['meta', { name: 'theme-color', content: '#3eaf7c' }],
-    ['meta', { name: 'og:type', content: 'website' }],
-    ['meta', { name: 'og:locale', content: 'en' }],
-    ['meta', { name: 'og:site_name', content: 'mdfind-node' }]
-  ]
+  }
 })

@@ -1,6 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="64" cy="64" r="60" fill="#3eaf7c"/>
-  <path d="M40 64L56 80L88 48" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M64 32C81.6731 32 96 46.3269 96 64C96 81.6731 81.6731 96 64 96C46.3269 96 32 81.6731 32 64C32 46.3269 46.3269 32 64 32Z" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Outer glow effect -->
+  <circle cx="64" cy="64" r="60" fill="url(#spotlight-glow)"/>
+
+  <!-- Magnifying glass -->
+  <g transform="translate(32, 32) scale(0.8)">
+    <!-- Glass part -->
+    <circle cx="40" cy="40" r="24"
+      stroke="white"
+      stroke-width="8"
+      fill="none"
+      stroke-linecap="round"/>
+
+    <!-- Handle -->
+    <line
+      x1="57" y1="57"
+      x2="75" y2="75"
+      stroke="white"
+      stroke-width="8"
+      stroke-linecap="round"/>
+
+    <!-- Reflection highlight -->
+    <path
+      d="M30 30 Q35 35, 40 30"
+      stroke="white"
+      stroke-width="4"
+      fill="none"
+      stroke-linecap="round"
+      opacity="0.7"/>
+  </g>
+
+  <!-- Gradient definitions -->
+  <defs>
+    <radialGradient id="spotlight-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#5CBBFF"/>
+      <stop offset="70%" stop-color="#3E8EFF"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </radialGradient>
+  </defs>
 </svg>

@@ -1,0 +1,141 @@
+:root {
+  --vp-font-family-base: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --vp-font-family-mono: 'SF Mono', 'JetBrains Mono', Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+
+  /* Brand colors */
+  --vp-c-brand: #2563eb;
+  --vp-c-brand-light: #3b82f6;
+  --vp-c-brand-lighter: #60a5fa;
+  --vp-c-brand-dark: #1d4ed8;
+  --vp-c-brand-darker: #1e40af;
+
+  /* Custom spacing */
+  --vp-layout-max-width: 1440px;
+
+  /* Custom border radius */
+  --vp-border-radius: 8px;
+
+  /* Code blocks */
+  --vp-code-block-bg: #1a1b26;
+  --vp-code-block-color: #a9b1d6;
+  --vp-code-line-highlight-color: rgba(37, 99, 235, 0.1);
+  --vp-code-copy-code-hover-bg: rgba(255, 255, 255, 0.05);
+  --vp-code-copy-code-active-bg: rgba(255, 255, 255, 0.1);
+
+  /* Custom shadows */
+  --vp-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --vp-shadow-2: 0 3px 12px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.07);
+  --vp-shadow-3: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --vp-shadow-4: 0 14px 44px rgba(0, 0, 0, 0.12), 0 3px 9px rgba(0, 0, 0, 0.12);
+  --vp-shadow-5: 0 18px 56px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+/* Dark mode adjustments */
+.dark {
+  --vp-c-bg: #0f172a;
+  --vp-c-bg-alt: #1e293b;
+  --vp-c-bg-soft: #1e293b;
+  --vp-c-divider: rgba(82, 82, 89, 0.32);
+  --vp-c-text: #e2e8f0;
+  --vp-c-text-1: #f8fafc;
+  --vp-c-text-2: #e2e8f0;
+}
+
+/* Enhanced typography */
+.vp-doc h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 2rem;
+  background: linear-gradient(45deg, var(--vp-c-brand), var(--vp-c-brand-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.vp-doc h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 2.5rem 0 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--vp-c-divider);
+}
+
+.vp-doc h3 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 2rem 0 1.25rem;
+}
+
+/* Code blocks */
+.vp-doc div[class*='language-'] {
+  border-radius: var(--vp-border-radius);
+  margin: 1.5rem 0;
+  box-shadow: var(--vp-shadow-2);
+}
+
+/* Custom components */
+.custom-block {
+  border-radius: var(--vp-border-radius);
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: var(--vp-shadow-1);
+}
+
+.custom-block.tip {
+  border-color: var(--vp-c-brand);
+}
+
+/* Navigation */
+.VPNav {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.VPNavBar.has-sidebar .content {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Sidebar */
+.VPSidebar {
+  padding: 1.5rem;
+  border-right: 1px solid var(--vp-c-divider);
+}
+
+/* Home page features */
+.VPFeature {
+  border-radius: var(--vp-border-radius);
+  padding: 1.5rem;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.VPFeature:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--vp-shadow-3);
+}
+
+/* Button styles */
+.VPButton {
+  border-radius: var(--vp-border-radius);
+  font-weight: 500;
+  transition: transform 0.2s ease;
+}
+
+.VPButton:hover {
+  transform: translateY(-1px);
+}
+
+/* Search box */
+.DocSearch-Button {
+  border-radius: var(--vp-border-radius) !important;
+  border: 1px solid var(--vp-c-divider) !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.DocSearch-Button:hover {
+  border-color: var(--vp-c-brand) !important;
+}
