@@ -57,7 +57,7 @@ export const MdfindOptionsSchema = MdfindOptionsInputSchema.transform(opts => {
 
   transformed.names = [...new Set([...namesList, ...(opts.name ? [opts.name] : [])])]
   transformed.attributes = [...new Set([...attributesList, ...(opts.attr ? [opts.attr] : [])])]
-  transformed.onlyInDirectory = opts.onlyIn ?? transformed.onlyInDirectory
+  transformed.onlyInDirectory = opts.onlyIn || transformed.onlyInDirectory
 
   return MdfindOptionsOutputSchema.parse(transformed)
 })

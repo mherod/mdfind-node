@@ -7,26 +7,72 @@ import { validateInput } from './validation.js'
 
 export { mdfindLive } from './live-search.js'
 
-const expandPath = (path: string): string => path.replace(/^~/, homedir())
+/**
+ * Expands ~ to the user's home directory in paths
+ */
+function expandPath(path: string): string {
+  return path.replace(/^~/, homedir())
+}
+
+/**
+ * Builds command line arguments for mdfind based on options
+ */
+function buildMdfindArgs(query: string, options: MdfindOptionsInput): string[] {
+  const args: string[] = []
+
+  if (options.onlyInDirectory) {
+    args.push('-onlyin', expandPath(options.onlyInDirectory))
+  }
+
+  // Handle name options
+  const names = options.names ?? []
+  if (names.length > 0) {
+    for (const name of names) {
+      args.push('-name', name)
+    }
+  }
+
+  // Handle attribute options
+  const attributes = options.attributes ?? []
+  if (attributes.length > 0) {
+    for (const attr of attributes) {
+      args.push('-attr', attr)
+    }
+  }
+
+  if (options.smartFolder) {
+    args.push('-s', options.smartFolder)
+  }
+  if (options.nullSeparator) {
+    args.push('-0')
+  }
+  if (options.reprint) {
+    args.push('-reprint')
+  }
+  if (options.literal) {
+    args.push('-literal')
+  }
+  if (options.interpret) {
+    args.push('-interpret')
+  }
+  if (options.count) {
+    args.push('-count')
+  }
+  if (options.live) {
+    args.push('-live')
+  }
+
+  const trimmedQuery = query.trim()
+  if (trimmedQuery) {
+    args.push(trimmedQuery)
+  }
+
+  return args
+}
 
 /**
  * Custom error class for mdfind-related errors.
  * Provides additional context from stderr output.
- *
- * Properties:
- * - message: Error description
- * - stderr: Raw error output from the command
- *
- * @example
- * ```typescript
- * try {
- *   await mdfind('invalid query')
- * } catch (error) {
- *   if (error instanceof MdfindError) {
- *     console.error('Search failed:', error.stderr)
- *   }
- * }
- * ```
  */
 export class MdfindError extends Error {
   public readonly name = 'MdfindError' as const
@@ -56,94 +102,18 @@ const DEFAULT_OPTIONS: MdfindOptionsInput = {
 /**
  * Execute a Spotlight search using the mdfind command.
  * Returns an array of file paths that match the query.
- *
- * @param {string} query - The search query
- * @param {MdfindOptionsInput} options - Search options
- * @returns {Promise<string[]>} Array of matching file paths
- * @throws {MdfindError} If the search fails
- *
- * @example
- * Basic search:
- * ```typescript
- * const files = await mdfind('kind:image')
- * console.log('Found images:', files)
- * ```
- *
- * @example
- * Search with options:
- * ```typescript
- * const files = await mdfind('kind:document', {
- *   onlyIn: '~/Documents',
- *   name: '*.pdf',
- *   attr: 'kMDItemTitle'
- * })
- * ```
  */
-export async function mdfind(query: string, options: MdfindOptionsInput = {}): Promise<string[]> {
-  if (!query.trim() && (!options.name || options.names?.length === 0)) {
-    throw new Error('Query cannot be empty unless using -name option')
-  }
-
-  const validatedOptions = MdfindOptionsSchema.parse({
-    ...DEFAULT_OPTIONS,
-    ...options
-  })
-
-  validateInput(query, validatedOptions)
-
-  const args: string[] = []
-
-  if (validatedOptions.onlyInDirectory) {
-    args.push('-onlyin', expandPath(validatedOptions.onlyInDirectory))
-  }
-  if (validatedOptions.names.length > 0) {
-    for (const name of validatedOptions.names) {
-      args.push('-name', name)
-    }
-  }
-  if (validatedOptions.attributes.length > 0) {
-    for (const attr of validatedOptions.attributes) {
-      args.push('-attr', attr)
-    }
-  }
-  if (validatedOptions.smartFolder) {
-    args.push('-s', validatedOptions.smartFolder)
-  }
-  if (validatedOptions.nullSeparator) {
-    args.push('-0')
-  }
-  if (validatedOptions.reprint) {
-    args.push('-reprint')
-  }
-  if (validatedOptions.literal) {
-    args.push('-literal')
-  }
-  if (validatedOptions.interpret) {
-    args.push('-interpret')
-  }
-  if (validatedOptions.count) {
-    args.push('-count')
-  }
-  if (validatedOptions.live) {
-    args.push('-live')
-  }
-
-  const trimmedQuery = query.trim()
-  if (trimmedQuery) {
-    args.push(trimmedQuery)
-  }
-
-  const child = spawn('mdfind', args, { env: process.env })
-
+export function mdfind(query: string, options: MdfindOptionsInput = {}): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    const results: string[] = []
+    const validatedOptions = MdfindOptionsSchema.parse({ ...DEFAULT_OPTIONS, ...options })
+    validateInput(query, validatedOptions)
+
+    const args = buildMdfindArgs(query, validatedOptions)
+    const child = spawn('mdfind', args, { env: process.env })
     let buffer = ''
 
     child.stdout.on('data', (data: Buffer) => {
       buffer += data.toString()
-      const lines = buffer.split(validatedOptions.nullSeparator ? '\0' : '\n')
-      buffer = lines.pop() ?? ''
-      results.push(...lines.filter(Boolean))
     })
 
     child.stderr.on('data', (data: Buffer) => {
@@ -154,78 +124,33 @@ export async function mdfind(query: string, options: MdfindOptionsInput = {}): P
       }
     })
 
-    child.on('close', (code: number) => {
-      if (code !== 0) {
-        reject(new MdfindError('mdfind exited with non-zero code', ''))
-        return
-      }
-      if (buffer) {
-        results.push(buffer)
-      }
-      resolve(results)
-    })
-
-    child.on('error', error => {
-      reject(new MdfindError(error.message, ''))
+    child.on('close', () => {
+      const separator = validatedOptions.nullSeparator ? '\0' : '\n'
+      const paths = buffer.split(separator).filter(Boolean)
+      resolve(paths)
     })
   })
 }
 
 /**
- * Execute a Spotlight search and return only the count of matches.
- *
- * @param {string} query - The Spotlight query to execute
- * @param {MdfindOptionsInput} [options] - Search configuration options
- * @returns {Promise<number>} Number of files matching the query
- *
- * @example
- * ```typescript
- * const count = await mdfindCount('kind:image')
- * console.log(`Found ${count} images`)
- * ```
+ * Get the count of files that match a Spotlight search query.
+ * Returns the number of matching files without retrieving their paths.
  */
-export async function mdfindCount(
-  query: string,
-  options: MdfindOptionsInput = {}
-): Promise<number> {
-  const validatedOptions = MdfindOptionsSchema.parse({
-    ...DEFAULT_OPTIONS,
-    ...options,
-    count: true
-  })
-  validateInput(query, validatedOptions)
-
-  const args: string[] = ['-count']
-
-  if (validatedOptions.onlyInDirectory) {
-    args.push('-onlyin', expandPath(validatedOptions.onlyInDirectory))
-  }
-  if (validatedOptions.names.length > 0) {
-    for (const name of validatedOptions.names) {
-      args.push('-name', name)
-    }
-  }
-  if (validatedOptions.attributes.length > 0) {
-    for (const attr of validatedOptions.attributes) {
-      args.push('-attr', attr)
-    }
-  }
-  if (validatedOptions.smartFolder) {
-    args.push('-s', validatedOptions.smartFolder)
-  }
-
-  const trimmedQuery = query.trim()
-  if (trimmedQuery) {
-    args.push(trimmedQuery)
-  }
-
-  const child = spawn('mdfind', args, { env: process.env })
-
+export function mdfindCount(query: string, options: MdfindOptionsInput = {}): Promise<number> {
   return new Promise((resolve, reject) => {
-    let output = ''
+    const validatedOptions = MdfindOptionsSchema.parse({
+      ...DEFAULT_OPTIONS,
+      ...options,
+      count: true
+    })
+    validateInput(query, validatedOptions)
+
+    const args = buildMdfindArgs(query, validatedOptions)
+    const child = spawn('mdfind', args, { env: process.env })
+    let buffer = ''
 
     child.stdout.on('data', (data: Buffer) => {
-      output += data.toString()
+      buffer += data.toString()
     })
 
     child.stderr.on('data', (data: Buffer) => {
@@ -236,21 +161,9 @@ export async function mdfindCount(
       }
     })
 
-    child.on('close', (code: number) => {
-      if (code !== 0) {
-        reject(new MdfindError('mdfind exited with non-zero code', ''))
-        return
-      }
-      const count = parseInt(output.trim(), 10)
-      if (isNaN(count)) {
-        reject(new MdfindError('Failed to parse count from mdfind output', output))
-        return
-      }
-      resolve(count)
-    })
-
-    child.on('error', error => {
-      reject(new MdfindError(error.message, ''))
+    child.on('close', () => {
+      const count = parseInt(buffer.trim(), 10)
+      resolve(isNaN(count) ? 0 : count)
     })
   })
 }
