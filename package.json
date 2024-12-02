@@ -38,6 +38,7 @@
     "examples:content-types": "tsx examples/content-types.ts",
     "examples:advanced-search": "tsx examples/advanced-search.ts",
     "examples:mdutil": "tsx examples/mdutil-status.ts",
+    "examples:mdutil-advanced": "tsx examples/mdutil-advanced.ts",
     "examples:mdimport": "tsx examples/mdimport.ts",
     "examples:date-queries": "tsx examples/date-queries.ts",
     "examples:date-queries-live": "tsx examples/date-queries-live.ts",
