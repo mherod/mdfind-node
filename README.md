@@ -20,6 +20,15 @@ A powerful Node.js wrapper for macOS's Spotlight search (`mdfind`), bringing sys
 - 🌳 **Type Trees** - Support for content type hierarchies
 - 🎨 **Specialized Methods** - Purpose-built methods for common file types
 
+## 📥 Documentation
+
+- [Quick Start Guide](./docs/README.md) - Get started with basic usage
+- [Query Builder](./docs/query-builder.md) - Learn about building complex queries
+- [Metadata](./docs/metadata.md) - Working with file metadata
+- [Content Types](./docs/content-types.md) - Understanding file type hierarchies
+- [Batch Operations](./docs/batch.md) - Processing multiple operations
+- [Advanced Topics](./docs/advanced-topics.md) - Performance, security, testing, and more
+
 ## 📥 Installation
 
 ```bash

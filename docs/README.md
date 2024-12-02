@@ -19,6 +19,17 @@ Each macOS Spotlight command has its own dedicated documentation:
 - [Content Types](./content-types.md) - Understanding Spotlight's type system
 - [Attribute Discovery](./attributes.md) - Finding and using metadata attributes
 
+## Advanced Topics
+
+- [Advanced Topics](./advanced-topics.md) - Performance optimization, security, testing, and troubleshooting
+  - Performance optimization and memory management
+  - Error recovery and resilience patterns
+  - Integration with other tools
+  - Security considerations
+  - Testing strategies
+  - Troubleshooting guide
+  - Migration from raw commands
+
 ## Examples
 
 See the [examples](../examples) directory for working code samples.
