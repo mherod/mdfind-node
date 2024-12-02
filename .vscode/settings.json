@@ -47,5 +47,8 @@
   "typescript.suggest.completeFunctionCalls": true,
   "editor.bracketPairColorization.enabled": true,
   "git.enableSmartCommit": true,
-  "npm.packageManager": "pnpm"
+  "npm.packageManager": "pnpm",
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  }
 }
