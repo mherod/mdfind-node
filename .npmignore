@@ -1,0 +1,55 @@
+# Development
+.github/
+.husky/
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/
+*.md
+!README.md
+!LICENSE.md
+
+# Source
+src/
+test/
+examples/
+coverage/
+.nyc_output/
+
+# Configuration
+.eslintrc*
+.prettierrc*
+.editorconfig
+.gitignore
+.npmignore
+tsconfig.json
+vitest.config.*
+*.config.js
+*.config.ts
+
+# Build artifacts
+.vitepress/
+.temp/
+.cache/
+*.log
+.eslintcache
+.pnpm-store/
+
+# Test files
+test-file.txt
+__tests__/
+__mocks__/
+*.test.*
+*.spec.*
+
+# TypeScript source maps
+*.map
+
+# Development scripts
+scripts/
