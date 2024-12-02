@@ -248,26 +248,31 @@ export const setIndexing = async (
 ): Promise<{ success: boolean; remainingEntries: string[] }> => {
   try {
     const resolvedPath = resolve(volumePath)
-    const escapedPath = escapeShellPath(resolvedPath)
-    await execAsync(`mdutil -i ${enable ? 'on' : 'off'} "${escapedPath}"`)
+    await execAsync(`mdutil -i ${enable ? 'on' : 'off'} "${escapeShellPath(resolvedPath)}"`)
 
-    // Verify the change
+    // Check if the operation was successful by verifying the current status
     const status = await getIndexingStatus(resolvedPath)
     const success = status.enabled === enable
 
-    // If disabling, check for any remaining entries
-    const remainingEntries = !enable ? await getIndexedEntries(resolvedPath) : []
+    // If disabling, check for remaining entries
+    const remainingEntries = enable ? [] : await getIndexedEntries(resolvedPath)
 
-    return { success, remainingEntries }
+    return {
+      success,
+      remainingEntries
+    }
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message.includes('invalid operation')) {
-        throw new MdutilError('Operation not permitted on this path', error.message, false)
-      }
-      if (error.message.includes('unknown indexing state')) {
+      const requiresRoot = error.message.includes('Operation not permitted')
+      const isInvalidOp = error.message.includes('invalid operation')
+      const isUnknownState = error.message.includes('unknown indexing state')
+
+      if (isInvalidOp) {
+        throw new MdutilError('Operation not permitted on this path', error.message, requiresRoot)
+      } else if (isUnknownState) {
         throw new MdutilError('Path is not eligible for Spotlight indexing', error.message, false)
       }
-      const requiresRoot = error.message.includes('Operation not permitted')
+
       throw new MdutilError(
         `Failed to ${enable ? 'enable' : 'disable'} indexing: ${error.message}`,
         error.message,
@@ -415,3 +420,259 @@ export const disableIndexing = async (directory = '/'): Promise<void> => {
 }
 
 export const eraseIndex = (directory = '/'): Promise<void> => eraseAndRebuildIndex(directory)
+
+/**
+ * Interface for volume configuration details
+ */
+export interface VolumeConfig {
+  uuid: string
+  creationDate: Date
+  modificationDate: Date
+  indexVersion: number
+  policyLevel: string
+  exclusions: string[]
+  stores: Record<
+    string,
+    {
+      creationDate: Date
+      indexVersion: number
+      partialPath: string
+      policyLevel: string
+    }
+  >
+}
+
+/**
+ * Interface for Spotlight store entries
+ */
+export interface StoreEntry {
+  path: string
+  type: 'directory' | 'file'
+  permissions: string
+  size: number
+  modificationDate: Date
+}
+
+/**
+ * Interface for index removal results
+ */
+export interface RemoveIndexResult {
+  success: boolean
+  requiresReindex: boolean
+  message: string
+}
+
+/**
+ * Interface for file reimport results
+ */
+export interface ReimportResult {
+  pluginId: string
+  filesProcessed: number
+  success: boolean
+}
+
+/**
+ * Get detailed configuration for a volume's Spotlight index
+ */
+export const getVolumeConfiguration = async (volumePath: string): Promise<VolumeConfig> => {
+  try {
+    const { stdout } = await execAsync(`sudo mdutil -P "${escapeShellPath(volumePath)}" | cat`)
+    const plist = stdout.trim()
+
+    // Parse the plist XML
+    const configMatch = plist.match(/<dict>[\s\S]*<\/dict>/)
+    if (!configMatch) {
+      throw new Error('Invalid configuration format')
+    }
+
+    // Extract key values using regex with better patterns
+    const uuid =
+      plist.match(/<key>ConfigurationVolumeUUID<\/key>\s*<string>([^<]+)<\/string>/)?.[1] ?? ''
+    const creationDate = new Date(
+      plist.match(/<key>ConfigurationCreationDate<\/key>\s*<date>([^<]+)<\/date>/)?.[1] ?? ''
+    )
+    const modificationDate = new Date(
+      plist.match(/<key>ConfigurationModificationDate<\/key>\s*<date>([^<]+)<\/date>/)?.[1] ?? ''
+    )
+
+    // Extract stores information with improved patterns
+    const stores: VolumeConfig['stores'] = {}
+    const storeMatches = plist.matchAll(/<key>([A-F0-9-]+)<\/key>\s*<dict>([\s\S]*?)<\/dict>/g)
+    for (const match of storeMatches) {
+      const [, storeId, storeData] = match
+      if (storeId && storeData) {
+        const creationDateMatch = storeData.match(
+          /<key>CreationDate<\/key>\s*<date>([^<]+)<\/date>/
+        )
+        const indexVersionMatch = storeData.match(
+          /<key>IndexVersion<\/key>\s*<integer>(\d+)<\/integer>/
+        )
+        const partialPathMatch = storeData.match(
+          /<key>PartialPath<\/key>\s*<string>([^<]+)<\/string>/
+        )
+        const policyLevelMatch = storeData.match(
+          /<key>PolicyLevel<\/key>\s*<string>([^<]+)<\/string>/
+        )
+
+        stores[storeId] = {
+          creationDate: new Date(creationDateMatch?.[1] ?? ''),
+          indexVersion: parseInt(indexVersionMatch?.[1] ?? '0', 10),
+          partialPath: partialPathMatch?.[1] ?? '',
+          policyLevel: policyLevelMatch?.[1] ?? ''
+        }
+      }
+    }
+
+    // Extract exclusions with better pattern
+    const exclusions: string[] = []
+    const exclusionsMatch = plist.match(/<key>Exclusions<\/key>\s*<array>([\s\S]*?)<\/array>/)
+    if (exclusionsMatch?.[1]) {
+      const exclusionMatches = exclusionsMatch[1].matchAll(/<string>([^<]+)<\/string>/g)
+      for (const match of exclusionMatches) {
+        if (match[1]) exclusions.push(match[1])
+      }
+    }
+
+    // Get index version from first store or default to 0
+    const indexVersion = Object.values(stores)[0]?.indexVersion ?? 0
+    const policyLevel = Object.values(stores)[0]?.policyLevel ?? 'unknown'
+
+    return {
+      uuid,
+      creationDate,
+      modificationDate,
+      indexVersion,
+      policyLevel,
+      exclusions,
+      stores
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      const requiresRoot = error.message.includes('Must be root')
+      throw new MdutilError(
+        `Failed to get volume configuration: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * List contents of the Spotlight store directory
+ */
+export const listSpotlightStore = async (volumePath: string): Promise<StoreEntry[]> => {
+  try {
+    const { stdout } = await execAsync(`sudo mdutil -L "${escapeShellPath(volumePath)}" | cat`)
+    const entries: StoreEntry[] = []
+
+    // Parse the ls-style output
+    const lines = stdout.split('\n').filter(Boolean)
+    for (const line of lines) {
+      const match = line.match(
+        /^([drwx-]{10})\s+\d+\s+\d+\s+\d+\s+(\d+)\s+(\w+\s+\d+\s+[\d:]+)\s+(.+)$/
+      )
+      if (match) {
+        const [, permStr, sizeStr, dateStr, pathStr] = match
+        if (permStr && sizeStr && dateStr && pathStr) {
+          entries.push({
+            path: pathStr,
+            type: permStr.startsWith('d') ? 'directory' : 'file',
+            permissions: permStr,
+            size: parseInt(sizeStr, 10),
+            modificationDate: new Date(dateStr)
+          })
+        }
+      }
+    }
+
+    return entries
+  } catch (error) {
+    if (error instanceof Error) {
+      const requiresRoot = error.message.includes('Must be root')
+      throw new MdutilError(
+        `Failed to list Spotlight store: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * Remove the Spotlight index directory for a volume
+ * This does not disable indexing, but forces Spotlight to rebuild the index
+ * Requires root privileges
+ *
+ * @param {string} volumePath - Path to the volume
+ * @returns {Promise<RemoveIndexResult>} Result of the operation
+ * @throws {MdutilError} If operation fails or requires root
+ */
+export const removeSpotlightIndex = async (volumePath: string): Promise<RemoveIndexResult> => {
+  try {
+    const { stdout } = await execAsync(`sudo mdutil -X "${escapeShellPath(volumePath)}" | cat`)
+
+    const success = !stdout.includes('Error')
+    const requiresReindex = success // If successful, reindex is always required
+    const message = stdout.trim() || 'Index directory removed successfully'
+
+    return {
+      success,
+      requiresReindex,
+      message
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      const requiresRoot = error.message.includes('Must be root')
+      throw new MdutilError(
+        `Failed to remove Spotlight index: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * Request reimport of files for a specific Spotlight plugin
+ * Useful when plugin updates require reprocessing of certain file types
+ * Requires root privileges
+ *
+ * @param {string} pluginId - ID of the Spotlight importer plugin
+ * @param {string} volumePath - Path to the volume
+ * @returns {Promise<ReimportResult>} Result of the reimport operation
+ * @throws {MdutilError} If operation fails or requires root
+ */
+export const reimportFiles = async (
+  pluginId: string,
+  volumePath: string
+): Promise<ReimportResult> => {
+  try {
+    const { stdout } = await execAsync(
+      `sudo mdutil -r "${escapeShellPath(pluginId)}" "${escapeShellPath(volumePath)}" | cat`
+    )
+
+    // Parse the output to determine success and count
+    const filesProcessed = parseInt(stdout.match(/Processed (\d+) files/)?.[1] ?? '0', 10)
+    const success = !stdout.includes('Error') && filesProcessed > 0
+
+    return {
+      pluginId,
+      filesProcessed,
+      success
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      const requiresRoot = error.message.includes('Must be root')
+      throw new MdutilError(
+        `Failed to reimport files: ${error.message}`,
+        error.message,
+        requiresRoot
+      )
+    }
+    throw error
+  }
+}
