@@ -1,5 +1,6 @@
 import { QueryBuilder } from '../src/query-builder.js'
-import { mdfindBatch, mdfindMultiDirectory, mdfindMultiQuery } from '../src/batch.js'
+import { batchSearch, batchSearchSequential } from '../src/batch.js'
+import { mdfindMultiDirectory, mdfindMultiQuery } from '../src/batch-utils.js'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -10,37 +11,33 @@ async function main() {
     const searches = [
       {
         query: new QueryBuilder().contentType('public.image').hasGPS().toString(),
-        onlyIn: join(homedir(), 'Pictures')
+        options: { onlyInDirectory: join(homedir(), 'Pictures') }
       },
       {
         query: new QueryBuilder()
           .contentType('public.audio')
           .minAudioQuality(44100, 320000)
           .toString(),
-        onlyIn: join(homedir(), 'Music')
+        options: { onlyInDirectory: join(homedir(), 'Music') }
       },
       {
         query: new QueryBuilder()
           .contentType('com.adobe.pdf')
           .modifiedAfter(new Date('2024-01-01'))
           .toString(),
-        onlyIn: join(homedir(), 'Documents')
+        options: { onlyInDirectory: join(homedir(), 'Documents') }
       }
     ]
 
-    const batchResults = await mdfindBatch(searches)
-    for (const result of batchResults) {
-      console.log(`\nQuery: ${result.query}`)
-      console.log(`Directory: ${result.options.onlyIn}`)
-      if (result.error) {
-        console.error('Error:', result.error.message)
-      } else {
-        console.log(`Found ${result.results.length} files`)
-        console.log(
-          'First 3:',
-          result.results.slice(0, 3).map(p => p.split('/').pop())
-        )
-      }
+    const batchResults = await batchSearch(searches)
+    for (let i = 0; i < searches.length; i++) {
+      console.log(`\nQuery: ${searches[i].query}`)
+      console.log(`Directory: ${searches[i].options.onlyInDirectory}`)
+      console.log(`Found ${batchResults[i].length} files`)
+      console.log(
+        'First 3:',
+        batchResults[i].slice(0, 3).map(p => p.split('/').pop())
+      )
     }
 
     // Example 2: Search multiple directories
@@ -56,17 +53,13 @@ async function main() {
       .toString()
 
     const directoryResults = await mdfindMultiDirectory(multiDirQuery, directories)
-    for (const result of directoryResults) {
-      console.log(`\nDirectory: ${result.options.onlyIn}`)
-      if (result.error) {
-        console.error('Error:', result.error.message)
-      } else {
-        console.log(`Found ${result.results.length} TypeScript files`)
-        console.log(
-          'First 3:',
-          result.results.slice(0, 3).map(p => p.split('/').pop())
-        )
-      }
+    for (let i = 0; i < directories.length; i++) {
+      console.log(`\nDirectory: ${directories[i]}`)
+      console.log(`Found ${directoryResults[i].length} TypeScript files`)
+      console.log(
+        'First 3:',
+        directoryResults[i].slice(0, 3).map(p => p.split('/').pop())
+      )
     }
 
     // Example 3: Run multiple queries in one directory
@@ -79,23 +72,41 @@ async function main() {
 
     const documentsPath = join(homedir(), 'Documents')
     const queryResults = await mdfindMultiQuery(queries, documentsPath)
-    for (const result of queryResults) {
-      console.log(`\nQuery: ${result.query}`)
-      if (result.error) {
-        console.error('Error:', result.error.message)
-      } else {
-        console.log(`Found ${result.results.length} files`)
-        console.log(
-          'First 3:',
-          result.results.slice(0, 3).map(p => p.split('/').pop())
-        )
+    for (let i = 0; i < queries.length; i++) {
+      console.log(`\nQuery: ${queries[i]}`)
+      console.log(`Found ${queryResults[i].length} files`)
+      console.log(
+        'First 3:',
+        queryResults[i].slice(0, 3).map(p => p.split('/').pop())
+      )
+    }
+
+    // Example 4: Run searches sequentially
+    console.log('\n4. Running searches sequentially:')
+    const sequentialSearches = [
+      {
+        query: 'kind:image',
+        options: { onlyInDirectory: join(homedir(), 'Pictures') }
+      },
+      {
+        query: 'kind:pdf',
+        options: { onlyInDirectory: join(homedir(), 'Documents') }
       }
+    ]
+
+    const sequentialResults = await batchSearchSequential(sequentialSearches)
+    for (let i = 0; i < sequentialSearches.length; i++) {
+      console.log(`\nQuery: ${sequentialSearches[i].query}`)
+      console.log(`Directory: ${sequentialSearches[i].options.onlyInDirectory}`)
+      console.log(`Found ${sequentialResults[i].length} files`)
+      console.log(
+        'First 3:',
+        sequentialResults[i].slice(0, 3).map(p => p.split('/').pop())
+      )
     }
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error:', error.message)
-      process.exit(1)
-    }
+    console.error('Error:', error)
+    process.exit(1)
   }
 }
 
