@@ -191,12 +191,7 @@ const parseFormattedMetadata = (output: string): MetadataResult => {
  */
 export const getMetadata = async (
   filePath: string,
-  options: MdlsOptions = {
-    attributes: [],
-    raw: false,
-    nullMarker: '(null)',
-    structured: false
-  }
+  options: Partial<MdlsOptions> = {}
 ): Promise<MetadataResult | ExtendedMetadata> => {
   const validatedOptions = MdlsOptionsSchema.parse(options)
   const args: string[] = []

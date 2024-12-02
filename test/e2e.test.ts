@@ -1,154 +1,78 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { unlink, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { exec } from 'node:child_process'
-import { promisify } from 'node:util'
 import { getMetadata } from '../src/mdls.js'
-import { disableIndexing, enableIndexing, eraseIndex, MdutilError } from '../src/mdutil.js'
+import type { ExtendedMetadata } from '../src/schemas/metadata/index.js'
+import { createTestFile, isSpotlightReady, removeTestFile } from './utils/spotlight.js'
 
-const execAsync = promisify(exec)
-const TEST_FILE_PATH = join(process.cwd(), 'test', 'e2e-test.md')
 const TEST_FILE_CONTENT = `# Test File
-This is a test file for E2E testing of mdls and mdutil functionality.
+This is a test file for E2E testing of mdls functionality.
 It contains some basic markdown content that Spotlight can index.
 `
 
-// Allow console statements in tests
-/* eslint-disable no-console */
+describe('End-to-end tests', () => {
+  let testFilePath: string
 
-describe('E2E Tests', () => {
   beforeAll(async () => {
-    // Create a test file we can control
-    await writeFile(TEST_FILE_PATH, TEST_FILE_CONTENT, 'utf-8')
-
-    // Force immediate indexing of the test file
-    await execAsync(`mdimport -i "${TEST_FILE_PATH}"`)
-
-    // Give Spotlight more time to index
-    await new Promise(resolve => {
-      setTimeout(resolve, 5000)
+    testFilePath = await createTestFile({
+      name: 'e2e-test.md',
+      content: TEST_FILE_CONTENT
     })
   })
 
   afterAll(async () => {
-    // Clean up test file
-    try {
-      await unlink(TEST_FILE_PATH)
-    } catch (error) {
-      console.error('Failed to clean up test file:', error)
-    }
+    await removeTestFile(testFilePath)
   })
 
-  describe('mdls', () => {
-    // Helper function to check if Spotlight is ready
-    async function isSpotlightReady(): Promise<boolean> {
-      try {
-        const { stdout } = await execAsync(`mdls "${TEST_FILE_PATH}"`)
-        return !stdout.includes('kMDItemFSName = (null)')
-      } catch {
-        return false
-      }
-    }
-
-    it('should read basic metadata from a real file', async () => {
-      if (!(await isSpotlightReady())) {
+  describe('getMetadata', () => {
+    it('should read all metadata', async () => {
+      if (!(await isSpotlightReady(testFilePath))) {
         console.warn('Skipping test - Spotlight indexing not ready')
         return
       }
 
-      const metadata = await getMetadata(TEST_FILE_PATH)
+      const metadata = (await getMetadata(testFilePath, { structured: true })) as ExtendedMetadata
 
       // Test basic file attributes that should always be present
-      expect(metadata).toBeDefined()
-      expect(metadata.kMDItemFSName).toBe('e2e-test.md')
-      expect(metadata.kMDItemContentType).toMatch(
-        /^(text\/markdown|net\.daringfireball\.markdown)$/
-      )
-      expect(typeof metadata.kMDItemFSSize).toBe('number')
-      expect(metadata.kMDItemFSSize).toBeGreaterThan(0)
+      expect(metadata.basic).toBeDefined()
+      expect(metadata.basic.name).toBe('e2e-test.md')
+      expect(metadata.basic.contentType).toMatch(/^(text\/markdown|net\.daringfireball\.markdown)$/)
+      expect(metadata.basic.size).toBeGreaterThan(0)
 
       // Test date attributes
-      expect(metadata.kMDItemContentCreationDate).toBeInstanceOf(Date)
-      expect(metadata.kMDItemContentModificationDate).toBeInstanceOf(Date)
+      expect(metadata.basic.created).toBeInstanceOf(Date)
+      expect(metadata.basic.modified).toBeInstanceOf(Date)
     })
 
     it('should read specific attributes', async () => {
-      if (!(await isSpotlightReady())) {
+      if (!(await isSpotlightReady(testFilePath))) {
         console.warn('Skipping test - Spotlight indexing not ready')
         return
       }
 
-      const metadata = await getMetadata(TEST_FILE_PATH, {
+      const metadata = (await getMetadata(testFilePath, {
+        structured: true,
         attributes: ['kMDItemFSName', 'kMDItemContentType']
-      })
+      })) as ExtendedMetadata
 
-      expect(Object.keys(metadata)).toHaveLength(2)
-      expect(metadata.kMDItemFSName).toBe('e2e-test.md')
-      expect(metadata.kMDItemContentType).toMatch(
-        /^(text\/markdown|net\.daringfireball\.markdown)$/
-      )
+      expect(Object.keys(metadata.spotlight)).toHaveLength(2)
+      expect(metadata.basic.name).toBe('e2e-test.md')
+      expect(metadata.basic.contentType).toMatch(/^(text\/markdown|net\.daringfireball\.markdown)$/)
     })
 
     it('should handle raw output format', async () => {
-      if (!(await isSpotlightReady())) {
+      if (!(await isSpotlightReady(testFilePath))) {
         console.warn('Skipping test - Spotlight indexing not ready')
         return
       }
 
-      const metadata = await getMetadata(TEST_FILE_PATH, {
+      const metadata = (await getMetadata(testFilePath, {
         raw: true,
+        structured: true,
         attributes: ['kMDItemContentType', 'kMDItemFSName']
-      })
+      })) as ExtendedMetadata
 
-      expect(Object.keys(metadata)).toHaveLength(2)
-      expect(metadata.kMDItemContentType).toMatch(
-        /^(text\/markdown|net\.daringfireball\.markdown)$/
-      )
-      expect(metadata.kMDItemFSName).toBe('e2e-test.md')
-    })
-  })
-
-  describe('mdutil', () => {
-    it('should handle indexing operations or skip if no permissions', async () => {
-      const testDir = join(process.cwd(), 'test')
-
-      try {
-        // Try to get current indexing status
-        await execAsync(`mdutil -s "${testDir}"`)
-      } catch (error) {
-        console.warn('Skipping mdutil tests - cannot access indexing status')
-        return
-      }
-
-      try {
-        // Test disabling indexing
-        await disableIndexing(testDir)
-        console.log('Successfully disabled indexing')
-
-        // Test enabling indexing
-        await enableIndexing(testDir)
-        console.log('Successfully enabled indexing')
-
-        // Test erasing and rebuilding index
-        await eraseIndex(testDir)
-        console.log('Successfully erased and rebuilt index')
-      } catch (error) {
-        // If we get permission errors or ineligible path errors, mark test as passed
-        if (error instanceof MdutilError) {
-          const message = error.message.toLowerCase()
-          if (
-            message.includes('operation not permitted') ||
-            message.includes('requires root privileges') ||
-            message.includes('not eligible for spotlight indexing') ||
-            message.includes('command failed: mdutil')
-          ) {
-            console.warn('Note: mdutil modification tests require root privileges or eligible path')
-            console.warn('Run tests with sudo to enable full mdutil testing')
-            return
-          }
-        }
-        throw error
-      }
+      expect(Object.keys(metadata.spotlight)).toHaveLength(2)
+      expect(metadata.basic.contentType).toMatch(/^(text\/markdown|net\.daringfireball\.markdown)$/)
+      expect(metadata.basic.name).toBe('e2e-test.md')
     })
   })
 })

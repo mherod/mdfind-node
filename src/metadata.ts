@@ -1,7 +1,8 @@
 import { getMetadata } from './mdls.js'
 import { type BasicMetadata, BasicMetadataSchema } from './schemas/metadata/basic.js'
-import { type XMPData, XMPDataSchema } from './schemas/metadata/xmp.js'
 import { type ExifData, ExifDataSchema } from './schemas/metadata/exif.js'
+import { type ExtendedMetadata } from './schemas/metadata/index.js'
+import { type XMPData, XMPDataSchema } from './schemas/metadata/xmp.js'
 
 /**
  * Get basic metadata for a file.
@@ -9,7 +10,8 @@ import { type ExifData, ExifDataSchema } from './schemas/metadata/exif.js'
  * @returns Basic metadata including name, size, dates, and type
  */
 export async function getBasicMetadata(filePath: string): Promise<BasicMetadata> {
-  const metadata = await getMetadata(filePath)
+  const result = (await getMetadata(filePath, { structured: true })) as ExtendedMetadata
+  const metadata = result.spotlight
   return BasicMetadataSchema.parse({
     name: metadata.kMDItemDisplayName ?? metadata.kMDItemFSName ?? '',
     contentType: metadata.kMDItemContentType,
@@ -27,7 +29,8 @@ export async function getBasicMetadata(filePath: string): Promise<BasicMetadata>
  * @returns EXIF metadata including camera info and settings
  */
 export async function getExifData(filePath: string): Promise<ExifData> {
-  const metadata = await getMetadata(filePath)
+  const result = (await getMetadata(filePath, { structured: true })) as ExtendedMetadata
+  const metadata = result.spotlight
   return ExifDataSchema.parse({
     make: metadata.kMDItemAcquisitionMake,
     model: metadata.kMDItemAcquisitionModel,
@@ -48,7 +51,8 @@ export async function getExifData(filePath: string): Promise<ExifData> {
  * @returns XMP metadata including document info and rights
  */
 export async function getXMPData(filePath: string): Promise<XMPData> {
-  const metadata = await getMetadata(filePath)
+  const result = (await getMetadata(filePath, { structured: true })) as ExtendedMetadata
+  const metadata = result.spotlight
   return XMPDataSchema.parse({
     title: metadata.kMDItemTitle,
     description: metadata.kMDItemDescription,

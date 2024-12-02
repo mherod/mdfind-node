@@ -1,6 +1,6 @@
 import { exec } from 'node:child_process'
-import { promisify } from 'node:util'
 import { resolve } from 'node:path'
+import { promisify } from 'node:util'
 import {
   type IndexingState,
   type IndexStatus,
@@ -98,7 +98,14 @@ const parseIndexingStatus = (output: string, volumePath: string): IndexStatus =>
  */
 export const getIndexingStatus = async (
   volumePath: string,
-  options: MdutilOptions = {}
+  options: MdutilOptions = {
+    maxBuffer: 1024 * 1024,
+    literal: false,
+    interpret: true,
+    verbose: false,
+    excludeSystemVolumes: false,
+    excludeUnknownState: false
+  }
 ): Promise<IndexStatus> => {
   const validatedOptions = MdutilOptionsSchema.parse(options)
   const args = ['-s']
@@ -137,7 +144,16 @@ export const getIndexingStatus = async (
  *   - If mdutil command fails
  *   - If root privileges are required
  */
-export const getAllVolumesStatus = async (options: MdutilOptions = {}): Promise<IndexStatus[]> => {
+export const getAllVolumesStatus = async (
+  options: MdutilOptions = {
+    maxBuffer: 1024 * 1024,
+    literal: false,
+    interpret: true,
+    verbose: false,
+    excludeSystemVolumes: false,
+    excludeUnknownState: false
+  }
+): Promise<IndexStatus[]> => {
   const validatedOptions = MdutilOptionsSchema.parse(options)
   const args = ['-s', '-a']
   if (validatedOptions.verbose) args.push('-v')

@@ -7,8 +7,8 @@ import { type XMPData, XMPDataSchema } from './xmp.js'
 // Extended metadata schema that combines all metadata types
 export const ExtendedMetadataSchema = z.object({
   basic: BasicMetadataSchema,
-  exif: ExifDataSchema,
-  xmp: XMPDataSchema,
+  exif: ExifDataSchema.optional(),
+  xmp: XMPDataSchema.optional(),
   spotlight: MetadataResultSchema
 })
 
@@ -21,10 +21,10 @@ export interface ExtendedMetadataOptions {
 }
 
 export {
-  type BasicMetadata,
   BasicMetadataSchema,
-  type ExifData,
   ExifDataSchema,
-  type XMPData,
-  XMPDataSchema
+  XMPDataSchema,
+  type BasicMetadata,
+  type ExifData,
+  type XMPData
 }
