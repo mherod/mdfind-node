@@ -121,10 +121,19 @@ const mediaFiles = await new QueryBuilder()
 ```typescript
 import { QueryBuilder, mdfindLive } from 'mdfind-node'
 
-// Create a query to watch for new PDFs
-const query = new QueryBuilder().isPDF().inDirectory('~/Downloads').toString()
+// Method 1: Using QueryBuilder
+const builder = new QueryBuilder({ live: true, timeout: 5000 })
+const search1 = await builder
+  .contentType('public.image')
+  .inDirectory('~/Downloads')
+  .executeLive(
+    file => console.log('New file:', file),
+    () => console.log('Search ended after timeout')
+  )
 
-const search = mdfindLive(
+// Method 2: Using mdfindLive
+const query = new QueryBuilder().isPDF().inDirectory('~/Downloads').toString()
+const search2 = mdfindLive(
   query,
   { reprint: true },
   {
@@ -133,49 +142,53 @@ const search = mdfindLive(
     onEnd: () => console.log('Search ended')
   }
 )
+
+// Both methods support manual termination
+setTimeout(() => {
+  search1.kill()
+  search2.kill()
+}, 10000)
 ```
 
 ### 📦 Batch Operations
 
 ```typescript
-import { QueryBuilder } from 'mdfind-node'
-import { batchSearch } from 'mdfind-node'
+import { QueryBuilder, batchSearch, mdfindMultiDirectory, mdfindMultiQuery } from 'mdfind-node'
 
-// Create multiple queries
+// Method 1: Parallel batch search
 const searches = [
   {
-    query: new QueryBuilder().contentType('public.image').minImageDimensions(1920, 1080).toString(),
+    query: new QueryBuilder().contentType('public.image').hasGPS().toString(),
     options: { onlyInDirectory: '~/Pictures' }
   },
   {
-    query: new QueryBuilder()
-      .contentType('com.adobe.pdf')
-      .modifiedAfter(new Date('2024-01-01'))
-      .toString(),
+    query: new QueryBuilder().contentType('public.audio').inGenre('Jazz').toString(),
+    options: { onlyInDirectory: '~/Music' }
+  },
+  {
+    query: new QueryBuilder().isPDF().author('John Doe').toString(),
     options: { onlyInDirectory: '~/Documents' }
   }
 ]
 
-// Run them in parallel
 const results = await batchSearch(searches)
 
-// Or use utility functions for common patterns
-import { mdfindMultiDirectory, mdfindMultiQuery } from 'mdfind-node'
+// Method 2: Search same query across directories
+const imageQuery = new QueryBuilder()
+  .contentType('public.image')
+  .minImageDimensions(1920, 1080)
+  .toString()
+const directories = ['~/Pictures', '~/Downloads', '~/Desktop']
+const directoryResults = await mdfindMultiDirectory(imageQuery, directories)
 
-// Search same query across multiple directories
-const directoryResults = await mdfindMultiDirectory(
-  new QueryBuilder().contentType('public.image').toString(),
-  ['~/Pictures', '~/Documents']
-)
-
-// Search multiple queries in one directory
-const queryResults = await mdfindMultiQuery(
-  [
-    new QueryBuilder().contentType('public.image').toString(),
-    new QueryBuilder().contentType('com.adobe.pdf').toString()
-  ],
-  '~/Documents'
-)
+// Method 3: Search multiple queries in one directory
+const queries = [
+  new QueryBuilder().isText().extension('ts').toString(),
+  new QueryBuilder().isText().extension('md').toString(),
+  new QueryBuilder().isJSON().toString()
+]
+const devDir = process.cwd()
+const queryResults = await mdfindMultiQuery(queries, devDir)
 ```
 
 ### 📝 Extended Metadata
@@ -195,6 +208,27 @@ The QueryBuilder includes specialized methods for common file types:
 
 ```typescript
 import { QueryBuilder } from 'mdfind-node'
+
+// Advanced image search
+const proPhotos = await new QueryBuilder()
+  .contentType('public.image')
+  .minImageDimensions(3000, 2000)
+  .withISO(100, 1600)
+  .withFocalLength(24, 200)
+  .withAperture(1.2, 2.8)
+  .hasGPS()
+  .modifiedAfter(new Date('2024-01-01'))
+  .execute()
+
+// Advanced audio search
+const hiResAudio = await new QueryBuilder()
+  .contentType('public.audio')
+  .withSampleRate(96000)
+  .withBitDepth(24)
+  .inGenre('Classical')
+  .byComposer('Mozart')
+  .withDuration(300, 1800) // 5-30 minutes
+  .execute()
 
 // Find text files
 const textFiles = await new QueryBuilder().isText().modifiedAfter(new Date('2024-01-01')).execute()

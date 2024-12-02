@@ -117,20 +117,27 @@ All search operations accept the standard mdfind options:
 
 ## Examples
 
-### Complex Search Patterns
+### Media File Organization
 
 ```typescript
-import { QueryBuilder } from 'mdfind-node'
-import { batchSearch } from 'mdfind-node'
+import { QueryBuilder, batchSearch } from 'mdfind-node'
 
-// Find different types of media files
+// Find different types of media files with specific criteria
 const searches = [
   {
-    query: new QueryBuilder().contentType('public.image').minImageDimensions(1920, 1080).toString(),
+    query: new QueryBuilder()
+      .contentType('public.image')
+      .minImageDimensions(3000, 2000)
+      .hasGPS()
+      .toString(),
     options: { onlyInDirectory: '~/Pictures' }
   },
   {
-    query: new QueryBuilder().contentType('public.audio').inGenre('Jazz').toString(),
+    query: new QueryBuilder()
+      .contentType('public.audio')
+      .minAudioQuality(44100, 320000)
+      .inGenre('Classical')
+      .toString(),
     options: { onlyInDirectory: '~/Music' }
   },
   {
@@ -145,19 +152,130 @@ const searches = [
 const results = await batchSearch(searches)
 ```
 
-### Directory-Specific Searches
+### Development Workspace Analysis
+
+```typescript
+import { mdfindMultiQuery } from 'mdfind-node'
+
+// Search for different types of development files
+const queries = [
+  new QueryBuilder().isText().extension('ts').containing('QueryBuilder').toString(),
+  new QueryBuilder().isMarkdown().modifiedAfter(new Date('2024-01-01')).toString(),
+  new QueryBuilder().isJSON().containing('dependencies').toString(),
+  new QueryBuilder().isPlist().toString()
+]
+
+const projectDir = process.cwd()
+const results = await mdfindMultiQuery(queries, projectDir)
+```
+
+### Multi-Directory Document Search
 
 ```typescript
 import { mdfindMultiDirectory } from 'mdfind-node'
 
-// Search for recent files across common directories
+// Search for documents across multiple locations
 const query = new QueryBuilder()
-  .modifiedAfter(new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
+  .useOperator('||')
+  .isPDF()
+  .isMarkdown()
+  .modifiedAfter(new Date('2024-01-01'))
   .toString()
 
-const directories = ['~/Desktop', '~/Downloads', '~/Documents']
+const directories = ['~/Documents', '~/Downloads', '~/Desktop', '~/Library/Documentation']
 
 const results = await mdfindMultiDirectory(query, directories)
+```
+
+### Sequential Processing
+
+```typescript
+import { batchSearchSequential } from 'mdfind-node'
+
+// Process memory-intensive searches one at a time
+const searches = [
+  {
+    query: new QueryBuilder().contentType('public.image').minImageDimensions(4000, 3000).toString(),
+    options: {
+      onlyInDirectory: '~/Pictures',
+      maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+    }
+  },
+  {
+    query: new QueryBuilder()
+      .contentType('public.movie')
+      .largerThan(2 * 1024 * 1024 * 1024) // > 2GB
+      .toString(),
+    options: {
+      onlyInDirectory: '~/Movies',
+      maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+    }
+  }
+]
+
+const results = await batchSearchSequential(searches)
+```
+
+## Performance Considerations
+
+1. **Parallel vs Sequential**
+
+   - Use `batchSearch` for independent, lightweight searches
+   - Use `batchSearchSequential` for memory-intensive operations
+   - Consider system resources when setting concurrency
+
+2. **Buffer Management**
+
+   - Set appropriate `maxBuffer` values based on expected result size
+   - Use smaller buffers for many parallel searches
+   - Use larger buffers for sequential operations
+
+3. **Directory Scoping**
+
+   - Always specify `onlyInDirectory` to limit search scope
+   - Use `mdfindMultiDirectory` for efficient multi-location searches
+   - Consider directory size when organizing batch operations
+
+4. **Query Optimization**
+   - Combine related queries with `useOperator('||')`
+   - Use specific content types and attributes
+   - Add date constraints to limit result sets
+
+## Error Handling
+
+```typescript
+import { batchSearch, MdfindError } from 'mdfind-node'
+
+try {
+  const results = await batchSearch(searches)
+} catch (error) {
+  if (error instanceof MdfindError) {
+    console.error('Search failed:', error.message)
+    console.error('stderr:', error.stderr)
+  } else {
+    console.error('Unexpected error:', error)
+  }
+}
+```
+
+## Resource Cleanup
+
+```typescript
+import { batchSearch } from 'mdfind-node'
+
+// Set timeouts for long-running searches
+const timeout = setTimeout(() => {
+  // Cleanup logic
+  process.exit(1)
+}, 30000)
+
+try {
+  const results = await batchSearch(searches)
+  clearTimeout(timeout)
+} catch (error) {
+  clearTimeout(timeout)
+  throw error
+}
 ```
 
 ## See Also

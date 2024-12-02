@@ -114,27 +114,67 @@ query.where('kMDItemFSName == "*.txt"').literal()
 ### Image-specific Filters
 
 ```typescript
-// Dimensions
-query.minImageDimensions(1920, 1080)
+// Basic image filters
+query.contentType('public.image').minImageDimensions(1920, 1080) // Minimum width and height
 
-// Camera information
+// Camera and shooting information
 query.takenWith('Canon') // Camera make
 query.usingModel('EOS R5') // Camera model
 query.withISO(100, 400) // ISO range
-query.withFocalLength(24, 70) // Focal length range
+query.withFocalLength(24, 70) // Focal length range (mm)
 query.inColorSpace('RGB') // Color space
 query.withBitDepth(16) // Bits per sample
 query.hasGPS() // Has location data
+
+// Raw metadata queries for other attributes
+query.where('kMDItemFNumber <= 2.8') // Aperture
+query.where('kMDItemExposureTime < 0.005') // Shutter speed (1/200s)
+query.where('kMDItemOrientation == 1') // Orientation
+
+// Combined example for professional photos
+const proPhotos = await new QueryBuilder()
+  .contentType('public.image')
+  .minImageDimensions(3000, 2000) // At least 3000x2000
+  .withISO(100, 1600) // Reasonable ISO range
+  .withFocalLength(24, 200) // Standard zoom range
+  .where('kMDItemFNumber <= 2.8') // Fast lens
+  .hasGPS() // Must have location data
+  .modifiedAfter(new Date('2024-01-01'))
+  .execute()
 ```
 
 ### Audio-specific Filters
 
 ```typescript
+// Basic audio filters
+query.contentType('public.audio').largerThan(5 * 1024 * 1024) // Larger than 5MB
+
+// Audio quality
+query.minAudioQuality(44100, 320000) // Sample rate (Hz) and bit rate (bps)
+query.withBitDepth(24) // Bits per sample
+
 // Music metadata
-query.inGenre('Jazz')
-query.recordedIn(2024)
-query.inAlbum('Greatest Hits')
-query.byComposer('Mozart')
+query.inGenre('Jazz') // Musical genre
+query.recordedIn(2024) // Recording year
+query.inAlbum('Greatest Hits') // Album name
+query.byComposer('Mozart') // Composer name
+query.byAuthor('Miles Davis') // Artist name (alias for author)
+
+// Raw metadata queries for other attributes
+query.where('kMDItemAudioChannelCount == 2') // Stereo audio
+query.where('kMDItemDurationSeconds >= 180') // Minimum duration
+query.where('kMDItemTempo >= 120') // BPM
+
+// Combined example for high-quality music
+const highQualityTracks = await new QueryBuilder()
+  .contentType('public.audio')
+  .minAudioQuality(96000, 1411000) // 96kHz/24-bit FLAC equivalent
+  .withBitDepth(24) // High bit depth
+  .inGenre('Classical')
+  .byComposer('Beethoven')
+  .where('kMDItemDurationSeconds >= 300 && kMDItemDurationSeconds <= 1800') // 5-30 minutes
+  .modifiedAfter(new Date('2024-01-01'))
+  .execute()
 ```
 
 ### File System Attributes
