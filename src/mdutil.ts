@@ -1,6 +1,7 @@
 import { exec } from 'node:child_process'
 import { resolve } from 'node:path'
 import { promisify } from 'node:util'
+import { mdfind } from './index.js'
 import {
   type IndexingState,
   type IndexStatus,
@@ -10,6 +11,20 @@ import {
 } from './schemas/index.js'
 
 const execAsync = promisify(exec)
+
+/**
+ * Safely escape a path for shell execution
+ * @internal
+ */
+function escapeShellPath(path: string): string {
+  return path
+    .replace(/([\s'"\[\](){}$&*?|<>^;`\\])/g, '\\$1') // Escape shell special characters
+    .replace(/\n/g, '') // Remove newlines
+    .replace(/\r/g, '') // Remove carriage returns
+    .replace(/\t/g, '') // Remove tabs
+    .replace(/\0/g, '') // Remove null bytes
+    .trim() // Remove leading/trailing whitespace
+}
 
 /**
  * Custom error class for mdutil-related errors.
@@ -186,21 +201,64 @@ export const getAllVolumesStatus = async (
 }
 
 /**
- * Enable or disable Spotlight indexing for a volume or directory.
+ * Check for any existing Spotlight entries in a directory.
+ * This helps verify if a path is truly removed from the index.
  *
- * Note: This operation often requires root privileges.
+ * @param {string} volumePath - Path to check for entries
+ * @returns {Promise<string[]>} Array of indexed file paths
+ *
+ * @throws {MdutilError}
+ *   - If the path doesn't exist
+ *   - If the search fails
+ */
+export const getIndexedEntries = async (volumePath: string): Promise<string[]> => {
+  try {
+    const resolvedPath = resolve(volumePath)
+    // Search for both the directory itself and any files within it
+    const query = `kMDItemPath == "${resolvedPath}"* || kMDItemPath == "${resolvedPath}"`
+    return await mdfind(query)
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new MdutilError(
+        `Failed to check indexed entries: ${error.message}`,
+        error.message,
+        false
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * Enable or disable Spotlight indexing for a volume or directory.
+ * Also verifies the change and checks for any remaining indexed entries.
  *
  * @param {string} volumePath - Path to enable/disable indexing for
  * @param {boolean} enable - Whether to enable (true) or disable (false) indexing
+ * @returns {Promise<{ success: boolean; remainingEntries: string[] }>} Status and any remaining entries
  *
  * @throws {MdutilError}
  *   - If the path doesn't exist
  *   - If mdutil command fails
  *   - If root privileges are required
  */
-export const setIndexing = async (volumePath: string, enable: boolean): Promise<void> => {
+export const setIndexing = async (
+  volumePath: string,
+  enable: boolean
+): Promise<{ success: boolean; remainingEntries: string[] }> => {
   try {
-    await execAsync(`mdutil -i ${enable ? 'on' : 'off'} "${volumePath}"`)
+    const resolvedPath = resolve(volumePath)
+    const escapedPath = escapeShellPath(resolvedPath)
+    await execAsync(`mdutil -i ${enable ? 'on' : 'off'} "${escapedPath}"`)
+
+    // Verify the change
+    const status = await getIndexingStatus(resolvedPath)
+    const success = status.enabled === enable
+
+    // If disabling, check for any remaining entries
+    const remainingEntries = !enable ? await getIndexedEntries(resolvedPath) : []
+
+    return { success, remainingEntries }
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('invalid operation')) {
@@ -234,7 +292,9 @@ export const setIndexing = async (volumePath: string, enable: boolean): Promise<
  */
 export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> => {
   try {
-    await execAsync(`mdutil -E "${volumePath}"`)
+    const resolvedPath = resolve(volumePath)
+    const escapedPath = escapeShellPath(resolvedPath)
+    await execAsync(`mdutil -E "${escapedPath}"`)
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('invalid operation')) {
@@ -266,7 +326,9 @@ export const eraseAndRebuildIndex = async (volumePath: string): Promise<void> =>
  */
 export const listIndexContents = async (volumePath: string): Promise<string> => {
   try {
-    const { stdout } = await execAsync(`mdutil -L "${volumePath}"`)
+    const resolvedPath = resolve(volumePath)
+    const escapedPath = escapeShellPath(resolvedPath)
+    const { stdout } = await execAsync(`mdutil -L "${escapedPath}"`)
     return stdout.trim()
   } catch (error) {
     if (error instanceof Error) {
@@ -296,7 +358,9 @@ export const listIndexContents = async (volumePath: string): Promise<string> => 
  */
 export const getVolumeConfig = async (volumePath: string): Promise<string> => {
   try {
-    const { stdout } = await execAsync(`mdutil -P "${volumePath}"`)
+    const resolvedPath = resolve(volumePath)
+    const escapedPath = escapeShellPath(resolvedPath)
+    const { stdout } = await execAsync(`mdutil -P "${escapedPath}"`)
     return stdout.trim()
   } catch (error) {
     if (error instanceof Error) {
@@ -325,7 +389,9 @@ export const getVolumeConfig = async (volumePath: string): Promise<string> => {
  */
 export const removeIndexDirectory = async (volumePath: string): Promise<void> => {
   try {
-    await execAsync(`mdutil -X "${volumePath}"`)
+    const resolvedPath = resolve(volumePath)
+    const escapedPath = escapeShellPath(resolvedPath)
+    await execAsync(`mdutil -X "${escapedPath}"`)
   } catch (error) {
     if (error instanceof Error) {
       const requiresRoot = error.message.includes('Operation not permitted')
@@ -340,6 +406,12 @@ export const removeIndexDirectory = async (volumePath: string): Promise<void> =>
 }
 
 // Convenience methods with default root path
-export const enableIndexing = (directory = '/'): Promise<void> => setIndexing(directory, true)
-export const disableIndexing = (directory = '/'): Promise<void> => setIndexing(directory, false)
+export const enableIndexing = async (directory = '/'): Promise<void> => {
+  await setIndexing(directory, true)
+}
+
+export const disableIndexing = async (directory = '/'): Promise<void> => {
+  await setIndexing(directory, false)
+}
+
 export const eraseIndex = (directory = '/'): Promise<void> => eraseAndRebuildIndex(directory)

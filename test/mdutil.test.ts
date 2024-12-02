@@ -1,14 +1,33 @@
+import { exec } from 'node:child_process'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { eraseAndRebuildIndex, getIndexingStatus, setIndexing } from '../src/mdutil.js'
-import { exec } from 'node:child_process'
 
-// Mock exec to use callback style
+// Mock child_process
 vi.mock('node:child_process', () => ({
   exec: vi.fn((command, callback) => {
     if (typeof callback === 'function') {
       callback(null, { stdout: '', stderr: '' })
     }
-  })
+  }),
+  execFile: vi.fn((file, args, callback) => {
+    if (typeof callback === 'function') {
+      callback(null, { stdout: '', stderr: '' })
+    }
+  }),
+  spawn: vi.fn(() => ({
+    stdout: {
+      on: vi.fn(),
+      pipe: vi.fn()
+    },
+    stderr: {
+      on: vi.fn()
+    },
+    on: vi.fn((event, callback) => {
+      if (event === 'close') {
+        callback(0)
+      }
+    })
+  }))
 }))
 
 describe('mdutil', () => {
@@ -47,24 +66,40 @@ describe('mdutil', () => {
   })
 
   describe('setIndexing', () => {
-    it('should enable indexing', async () => {
-      vi.mocked(exec).mockImplementation((_, callback) => {
-        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
-        callback(null, { stdout: '', stderr: '' })
+    beforeEach(() => {
+      // Mock getIndexingStatus to return appropriate status based on command
+      vi.mocked(exec).mockImplementation((command, callback) => {
+        if (command.includes('-i on')) {
+          // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
+          callback(null, { stdout: '', stderr: '' })
+        } else if (command.includes('-i off')) {
+          // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
+          callback(null, { stdout: '', stderr: '' })
+        } else if (command.includes('-s')) {
+          const isEnabled = !command.includes('off')
+          // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
+          callback(null, {
+            stdout: isEnabled ? 'Indexing enabled.' : 'Indexing disabled.',
+            stderr: ''
+          })
+        } else {
+          // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
+          callback(null, { stdout: '', stderr: '' })
+        }
         return {} as any
       })
+    })
 
-      await expect(setIndexing('/', true)).resolves.toBeUndefined()
+    it('should enable indexing', async () => {
+      const result = await setIndexing('/', true)
+      expect(result.success).toBe(true)
+      expect(result.remainingEntries).toEqual([])
     })
 
     it('should disable indexing', async () => {
-      vi.mocked(exec).mockImplementation((_, callback) => {
-        // @ts-expect-error - Mock callback type doesn't match exec callback but is sufficient for testing
-        callback(null, { stdout: '', stderr: '' })
-        return {} as any
-      })
-
-      await expect(setIndexing('/', false)).resolves.toBeUndefined()
+      const result = await setIndexing('/', false)
+      expect(result.success).toBe(true)
+      expect(result.remainingEntries).toEqual([])
     })
 
     it('should handle invalid operation error', async () => {

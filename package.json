@@ -10,7 +10,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup src/index.ts --dts --format esm",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
@@ -40,7 +40,8 @@
     "examples:mdutil": "tsx examples/mdutil-status.ts",
     "examples:mdimport": "tsx examples/mdimport.ts",
     "examples:date-queries": "tsx examples/date-queries.ts",
-    "examples:date-queries-live": "tsx examples/date-queries-live.ts"
+    "examples:date-queries-live": "tsx examples/date-queries-live.ts",
+    "examples:remove-from-spotlight": "tsx examples/remove-from-spotlight.ts"
   },
   "keywords": [
     "macos",
