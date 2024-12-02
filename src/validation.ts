@@ -15,6 +15,10 @@ export const validateInput = (query: string, options: MdfindOptionsInput): void 
     throw new Error('Cannot use literal and interpret options together')
   }
 
+  if (options.timeout !== undefined && !options.live) {
+    throw new Error('Timeout option can only be used with live searches')
+  }
+
   const hasNameOption = Boolean(options.name) || (options.names?.length ?? 0) > 0
   if (hasNameOption && !query.trim()) {
     // When using -name, query is optional

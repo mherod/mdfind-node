@@ -186,6 +186,37 @@ await builder
   )
 ```
 
+### Timeout Handling
+
+The live search functionality supports an optional timeout to automatically stop the search after a specified duration:
+
+```typescript
+// Set timeout in constructor
+const builder = new QueryBuilder({
+  live: true,
+  timeout: 5000 // Stop after 5 seconds
+})
+
+// Or configure with method chain
+const builder = new QueryBuilder()
+  .maxBuffer(1024 * 1024) // 1MB buffer
+  .executeLive(
+    file => console.log('Found:', file),
+    () => console.log('Search ended after timeout')
+  )
+
+// Manual termination is still possible
+const search = builder.executeLive(file => console.log('Found:', file))
+setTimeout(() => search.kill(), 10000) // Stop after 10 seconds
+```
+
+When a timeout is specified:
+
+- The search will automatically stop after the specified duration (in milliseconds)
+- The `onComplete` callback will be called when the timeout is reached
+- Any pending results will be processed before stopping
+- Resources will be properly cleaned up
+
 ## Complex Examples
 
 ### High-res Photos with GPS

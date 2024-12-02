@@ -14,6 +14,19 @@ const CoreOptionsSchema = z.object({
  */
 export const SearchOptionsSchema = CoreOptionsSchema.extend({
   live: z.boolean().default(false),
+  /**
+   * Automatically stop live search after specified duration (in milliseconds).
+   * Only applies to live searches.
+   * When timeout is reached:
+   * - Search will be stopped
+   * - onComplete callback will be called
+   * - Resources will be cleaned up
+   * @example
+   * ```typescript
+   * // Stop after 5 seconds
+   * const options = { live: true, timeout: 5000 }
+   * ```
+   */
   timeout: z.number().optional(),
   operator: z.enum(['&&', '||']).default('&&'),
   count: z.boolean().default(false),
