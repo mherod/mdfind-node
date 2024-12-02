@@ -1,35 +1,40 @@
-import { mdfind } from './mdfind.js'
-import type { MdfindOptionsInput } from './schemas/index.js'
+import { spawn } from 'node:child_process'
+import { EventEmitter } from 'node:events'
+import { homedir } from 'node:os'
+import process from 'node:process'
+import { clearTimeout, setTimeout, type Timeout } from 'node:timers'
+import { z } from 'zod'
+
+const SearchOptionsSchema = z.object({
+  live: z.boolean().default(false),
+  timeout: z.number().optional().describe('Timeout in milliseconds for live searches'),
+  operator: z.enum(['&&', '||']).default('&&'),
+  name: z.string().optional(),
+  onlyIn: z.string().optional(),
+  maxBuffer: z.number().default(1024 * 1024),
+  interpret: z.boolean().default(false),
+  literal: z.boolean().default(false)
+})
+
+type SearchOptions = z.infer<typeof SearchOptionsSchema>
 
 /**
  * A fluent interface for building and executing Spotlight queries.
- * Provides type-safe methods for constructing complex search criteria.
- *
- * @example
- * ```typescript
- * const query = new QueryBuilder()
- *   .contentType('public.image')
- *   .inDirectory('~/Pictures')
- *   .modifiedAfter(new Date('2024-01-01'))
- *   .execute()
- * ```
  */
 export class QueryBuilder {
-  private conditions: string[] = []
-  private options: MdfindOptionsInput = {
+  private query: string[] = []
+  private options: SearchOptions = {
     live: false,
-    count: false,
-    nullSeparator: false,
-    maxBuffer: 1024 * 1024,
-    reprint: false,
-    literal: false,
-    interpret: false,
-    names: [],
-    attributes: [],
-    onlyInDirectory: undefined,
-    smartFolder: undefined
+    operator: '&&',
+    maxBuffer: 1024 * 1024
   }
-  private operator: '&&' | '||' = '&&'
+
+  /**
+   * Create a new QueryBuilder instance
+   */
+  constructor(options?: Partial<SearchOptions>) {
+    this.options = SearchOptionsSchema.parse({ ...this.options, ...options })
+  }
 
   /**
    * Add a raw query condition.
@@ -47,7 +52,7 @@ export class QueryBuilder {
    * ```
    */
   public where(condition: string): this {
-    this.conditions.push(condition)
+    this.query.push(condition)
     return this
   }
 
@@ -74,23 +79,12 @@ export class QueryBuilder {
    * ```
    */
   public contentType(type: string): this {
-    this.conditions.push(`kMDItemContentType == "${type}"`)
+    this.query.push(`kMDItemContentType == "${type}"`)
     return this
   }
 
   /**
-   * Filter by file name pattern.
-   * Supports glob-style patterns.
-   *
-   * @param {string} pattern - File name pattern to match
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .named('*.pdf')
-   *   .execute()
-   * ```
+   * Set the name pattern for file matching
    */
   public named(pattern: string): this {
     this.options.name = pattern
@@ -98,18 +92,7 @@ export class QueryBuilder {
   }
 
   /**
-   * Limit search to a specific directory.
-   * Supports tilde (~) expansion for home directory.
-   *
-   * @param {string} path - Directory path to search in
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .inDirectory('~/Documents')
-   *   .execute()
-   * ```
+   * Set the directory to search in
    */
   public inDirectory(path: string): this {
     this.options.onlyIn = path
@@ -123,7 +106,7 @@ export class QueryBuilder {
    * @returns {this} The builder instance for chaining
    */
   public createdAfter(date: Date): this {
-    this.conditions.push(`kMDItemContentCreationDate > "${date.toISOString()}"`)
+    this.query.push(`kMDItemContentCreationDate > "${date.toISOString()}"`)
     return this
   }
 
@@ -134,7 +117,7 @@ export class QueryBuilder {
    * @returns {this} The builder instance for chaining
    */
   public createdBefore(date: Date): this {
-    this.conditions.push(`kMDItemContentCreationDate < "${date.toISOString()}"`)
+    this.query.push(`kMDItemContentCreationDate < "${date.toISOString()}"`)
     return this
   }
 
@@ -145,7 +128,7 @@ export class QueryBuilder {
    * @returns {this} The builder instance for chaining
    */
   public modifiedAfter(date: Date): this {
-    this.conditions.push(`kMDItemContentModificationDate > "${date.toISOString()}"`)
+    this.query.push(`kMDItemContentModificationDate > "${date.toISOString()}"`)
     return this
   }
 
@@ -156,7 +139,7 @@ export class QueryBuilder {
    * @returns {this} The builder instance for chaining
    */
   public modifiedBefore(date: Date): this {
-    this.conditions.push(`kMDItemContentModificationDate < "${date.toISOString()}"`)
+    this.query.push(`kMDItemContentModificationDate < "${date.toISOString()}"`)
     return this
   }
 
@@ -167,7 +150,7 @@ export class QueryBuilder {
    * @returns {this} The builder instance for chaining
    */
   public lastOpenedAfter(date: Date): this {
-    this.conditions.push(`kMDItemLastUsedDate > "${date.toISOString()}"`)
+    this.query.push(`kMDItemLastUsedDate > "${date.toISOString()}"`)
     return this
   }
 
@@ -185,7 +168,7 @@ export class QueryBuilder {
    * ```
    */
   public largerThan(bytes: number): this {
-    this.conditions.push(`kMDItemFSSize > ${bytes}`)
+    this.query.push(`kMDItemFSSize > ${bytes}`)
     return this
   }
 
@@ -203,7 +186,7 @@ export class QueryBuilder {
    * ```
    */
   public smallerThan(bytes: number): this {
-    this.conditions.push(`kMDItemFSSize < ${bytes}`)
+    this.query.push(`kMDItemFSSize < ${bytes}`)
     return this
   }
 
@@ -221,7 +204,7 @@ export class QueryBuilder {
    * ```
    */
   public extension(ext: string): this {
-    this.conditions.push(`kMDItemFSName ==[c] "*.${ext}"`)
+    this.query.push(`kMDItemFSName ==[c] "*.${ext}"`)
     return this
   }
 
@@ -239,7 +222,7 @@ export class QueryBuilder {
    * ```
    */
   public author(name: string): this {
-    this.conditions.push(`kMDItemAuthors == "${name}"`)
+    this.query.push(`kMDItemAuthors == "${name}"`)
     return this
   }
 
@@ -276,7 +259,7 @@ export class QueryBuilder {
    * ```
    */
   public containing(text: string): this {
-    this.conditions.push(`kMDItemTextContent == "${text}"w`)
+    this.query.push(`kMDItemTextContent == "${text}"w`)
     return this
   }
 
@@ -367,7 +350,7 @@ export class QueryBuilder {
    * ```
    */
   public hasGPS(): this {
-    this.conditions.push('kMDItemLatitude != null && kMDItemLongitude != null')
+    this.query.push('kMDItemLatitude != null && kMDItemLongitude != null')
     return this
   }
 
@@ -387,30 +370,15 @@ export class QueryBuilder {
    * ```
    */
   public minAudioQuality(sampleRate: number, bitRate: number): this {
-    this.conditions.push(
-      `kMDItemAudioSampleRate >= ${sampleRate} && kMDItemAudioBitRate >= ${bitRate}`
-    )
+    this.query.push(`kMDItemAudioSampleRate >= ${sampleRate} && kMDItemAudioBitRate >= ${bitRate}`)
     return this
   }
 
   /**
-   * Set the logical operator for multiple conditions.
-   * Default is AND (&&). Use this to change to OR (||).
-   *
-   * @param {string} op - Logical operator ('&&' or '||')
-   * @returns {this} The builder instance for chaining
-   *
-   * @example
-   * ```typescript
-   * const files = await new QueryBuilder()
-   *   .useOperator('||')
-   *   .extension('jpg')
-   *   .extension('png')
-   *   .execute()
-   * ```
+   * Set the operator for combining conditions
    */
   public useOperator(op: '&&' | '||'): this {
-    this.operator = op
+    this.options.operator = op
     return this
   }
 
@@ -428,7 +396,7 @@ export class QueryBuilder {
    * ```
    */
   public hasKeyword(keyword: string): this {
-    this.conditions.push(`(kMDItemTextContent == "${keyword}"w || kMDItemKeywords == "${keyword}")`)
+    this.query.push(`(kMDItemTextContent == "${keyword}"w || kMDItemKeywords == "${keyword}")`)
     return this
   }
 
@@ -448,7 +416,7 @@ export class QueryBuilder {
    * ```
    */
   public minImageDimensions(width: number, height: number): this {
-    this.conditions.push(`kMDItemPixelWidth >= ${width} && kMDItemPixelHeight >= ${height}`)
+    this.query.push(`kMDItemPixelWidth >= ${width} && kMDItemPixelHeight >= ${height}`)
     return this
   }
 
@@ -465,7 +433,7 @@ export class QueryBuilder {
    * ```
    */
   public isApplication(): this {
-    this.conditions.push('kMDItemContentType == "com.apple.application-bundle"')
+    this.query.push('kMDItemContentType == "com.apple.application-bundle"')
     return this
   }
 
@@ -482,7 +450,7 @@ export class QueryBuilder {
    * ```
    */
   public isPreferencePane(): this {
-    this.conditions.push('kMDItemContentType == "com.apple.systempreference"')
+    this.query.push('kMDItemContentType == "com.apple.systempreference"')
     return this
   }
 
@@ -500,7 +468,7 @@ export class QueryBuilder {
    * ```
    */
   public hasLabel(label: number): this {
-    this.conditions.push(`kMDItemFSLabel == ${label}`)
+    this.query.push(`kMDItemFSLabel == ${label}`)
     return this
   }
 
@@ -517,7 +485,7 @@ export class QueryBuilder {
    * ```
    */
   public isInvisible(): this {
-    this.conditions.push('kMDItemFSInvisible == 1')
+    this.query.push('kMDItemFSInvisible == 1')
     return this
   }
 
@@ -535,7 +503,7 @@ export class QueryBuilder {
    * ```
    */
   public ownedBy(uid: number): this {
-    this.conditions.push(`kMDItemFSOwnerUserID == ${uid}`)
+    this.query.push(`kMDItemFSOwnerUserID == ${uid}`)
     return this
   }
 
@@ -553,7 +521,7 @@ export class QueryBuilder {
    * ```
    */
   public encodedBy(appName: string): this {
-    this.conditions.push(`kMDItemEncodingApplications == "${appName}"`)
+    this.query.push(`kMDItemEncodingApplications == "${appName}"`)
     return this
   }
 
@@ -572,7 +540,7 @@ export class QueryBuilder {
    * ```
    */
   public inGenre(genre: string): this {
-    this.conditions.push(`kMDItemMusicalGenre == "${genre}"`)
+    this.query.push(`kMDItemMusicalGenre == "${genre}"`)
     return this
   }
 
@@ -591,7 +559,7 @@ export class QueryBuilder {
    * ```
    */
   public recordedIn(year: number): this {
-    this.conditions.push(`kMDItemRecordingYear == ${year}`)
+    this.query.push(`kMDItemRecordingYear == ${year}`)
     return this
   }
 
@@ -610,7 +578,7 @@ export class QueryBuilder {
    * ```
    */
   public inAlbum(name: string): this {
-    this.conditions.push(`kMDItemAlbum == "${name}"`)
+    this.query.push(`kMDItemAlbum == "${name}"`)
     return this
   }
 
@@ -629,7 +597,7 @@ export class QueryBuilder {
    * ```
    */
   public byComposer(name: string): this {
-    this.conditions.push(`kMDItemComposer == "${name}"`)
+    this.query.push(`kMDItemComposer == "${name}"`)
     return this
   }
 
@@ -648,7 +616,7 @@ export class QueryBuilder {
    * ```
    */
   public takenWith(make: string): this {
-    this.conditions.push(`kMDItemAcquisitionMake == "${make}"`)
+    this.query.push(`kMDItemAcquisitionMake == "${make}"`)
     return this
   }
 
@@ -667,7 +635,7 @@ export class QueryBuilder {
    * ```
    */
   public usingModel(model: string): this {
-    this.conditions.push(`kMDItemAcquisitionModel == "${model}"`)
+    this.query.push(`kMDItemAcquisitionModel == "${model}"`)
     return this
   }
 
@@ -687,7 +655,7 @@ export class QueryBuilder {
    * ```
    */
   public withISO(min: number, max: number): this {
-    this.conditions.push(`kMDItemISOSpeed >= ${min} && kMDItemISOSpeed <= ${max}`)
+    this.query.push(`kMDItemISOSpeed >= ${min} && kMDItemISOSpeed <= ${max}`)
     return this
   }
 
@@ -707,7 +675,7 @@ export class QueryBuilder {
    * ```
    */
   public withFocalLength(min: number, max: number): this {
-    this.conditions.push(`kMDItemFocalLength >= ${min} && kMDItemFocalLength <= ${max}`)
+    this.query.push(`kMDItemFocalLength >= ${min} && kMDItemFocalLength <= ${max}`)
     return this
   }
 
@@ -726,7 +694,7 @@ export class QueryBuilder {
    * ```
    */
   public inColorSpace(colorSpace: string): this {
-    this.conditions.push(`kMDItemColorSpace == "${colorSpace}"`)
+    this.query.push(`kMDItemColorSpace == "${colorSpace}"`)
     return this
   }
 
@@ -745,7 +713,7 @@ export class QueryBuilder {
    * ```
    */
   public withBitDepth(bits: number): this {
-    this.conditions.push(`kMDItemBitsPerSample == ${bits}`)
+    this.query.push(`kMDItemBitsPerSample == ${bits}`)
     return this
   }
 
@@ -780,7 +748,7 @@ export class QueryBuilder {
    * ```
    */
   public isText(): this {
-    this.conditions.push('kMDItemContentTypeTree == "public.text"')
+    this.query.push('kMDItemContentTypeTree == "public.text"')
     return this
   }
 
@@ -797,7 +765,7 @@ export class QueryBuilder {
    * ```
    */
   public isComposite(): this {
-    this.conditions.push('kMDItemContentTypeTree == "public.composite-content"')
+    this.query.push('kMDItemContentTypeTree == "public.composite-content"')
     return this
   }
 
@@ -814,7 +782,7 @@ export class QueryBuilder {
    * ```
    */
   public isAudiovisual(): this {
-    this.conditions.push('kMDItemContentTypeTree == "public.audiovisual-content"')
+    this.query.push('kMDItemContentTypeTree == "public.audiovisual-content"')
     return this
   }
 
@@ -831,7 +799,7 @@ export class QueryBuilder {
    * ```
    */
   public isBundle(): this {
-    this.conditions.push('kMDItemContentTypeTree == "com.apple.bundle"')
+    this.query.push('kMDItemContentTypeTree == "com.apple.bundle"')
     return this
   }
 
@@ -848,7 +816,7 @@ export class QueryBuilder {
    * ```
    */
   public isMarkdown(): this {
-    this.conditions.push('kMDItemContentType == "net.daringfireball.markdown"')
+    this.query.push('kMDItemContentType == "net.daringfireball.markdown"')
     return this
   }
 
@@ -865,7 +833,7 @@ export class QueryBuilder {
    * ```
    */
   public isPlist(): this {
-    this.conditions.push('kMDItemContentType == "com.apple.property-list"')
+    this.query.push('kMDItemContentType == "com.apple.property-list"')
     return this
   }
 
@@ -882,7 +850,7 @@ export class QueryBuilder {
    * ```
    */
   public isPDF(): this {
-    this.conditions.push('kMDItemContentType == "com.adobe.pdf"')
+    this.query.push('kMDItemContentType == "com.adobe.pdf"')
     return this
   }
 
@@ -899,7 +867,7 @@ export class QueryBuilder {
    * ```
    */
   public isJSON(): this {
-    this.conditions.push('kMDItemContentType == "public.json"')
+    this.query.push('kMDItemContentType == "public.json"')
     return this
   }
 
@@ -916,37 +884,201 @@ export class QueryBuilder {
    * ```
    */
   public isYAML(): this {
-    this.conditions.push('kMDItemContentType == "public.yaml"')
+    this.query.push('kMDItemContentType == "public.yaml"')
     return this
   }
 
   /**
-   * Convert the query to a string format that mdfind understands.
-   * Used internally by execute() and for debugging purposes.
-   *
-   * @returns {string} The formatted query string
-   *
-   * @example
-   * ```typescript
-   * const query = new QueryBuilder()
-   *   .contentType('public.image')
-   *   .hasGPS()
-   *   .toString()
-   * // Returns: 'kMDItemContentType == "public.image" && kMDItemLatitude != null && kMDItemLongitude != null'
-   * ```
+   * Convert the query to a string
    */
   public toString(): string {
-    return this.conditions.length ? this.conditions.join(` ${this.operator} `) : ''
+    const query = this.query.length ? this.query.join(` ${this.options.operator} `) : ''
+    const args: string[] = []
+
+    if (this.options.name) {
+      args.push(`kMDItemFSName ==[c] "${this.options.name}"`)
+    }
+
+    return args.length
+      ? query
+        ? `${query} ${this.options.operator} ${args.join(' ')}`
+        : args.join(' ')
+      : query
   }
 
   /**
-   * Execute the query and return the results
-   *
-   * @returns {Promise<string[]>} Array of matching file paths
+   * Execute the search query
    */
-  public async execute(): Promise<string[]> {
-    const result = await mdfind(this.toString(), this.options)
-    return result
+  public execute(): Promise<string[]> {
+    const args = [...this.query]
+    const command = 'mdfind'
+
+    // Expand home directory for execution
+    if (this.options.onlyIn) {
+      args.push('-onlyin', this.options.onlyIn.replace(/^~/, homedir()))
+    }
+
+    if (this.options.live) {
+      return new Promise((resolve, reject) => {
+        const results: string[] = []
+        const emitter = new EventEmitter()
+        const child = spawn(command, ['-live', ...args])
+        let timeoutId: Timeout | undefined
+
+        // Set up timeout if specified
+        if (typeof this.options.timeout === 'number') {
+          timeoutId = setTimeout(() => {
+            child.kill()
+            emitter.emit('done')
+          }, this.options.timeout)
+        }
+
+        child.stdout.setEncoding('utf8')
+        child.stdout.on('data', (data: string) => {
+          const lines = data.trim().split('\n')
+          for (const line of lines) {
+            if (line.length > 0) {
+              results.push(line)
+              emitter.emit('result', line)
+            }
+          }
+        })
+
+        child.stderr.on('data', (data: string) => {
+          reject(new Error(`mdfind error: ${data}`))
+        })
+
+        child.on('close', (code: number | null) => {
+          if (code !== null && code !== 0) {
+            reject(new Error(`mdfind exited with code ${code}`))
+          }
+          emitter.emit('done')
+        })
+
+        emitter.on('done', () => {
+          if (timeoutId !== undefined) {
+            clearTimeout(timeoutId)
+          }
+          resolve(results)
+        })
+
+        // Handle process termination
+        const cleanup = (): void => {
+          child.kill()
+          if (timeoutId !== undefined) {
+            clearTimeout(timeoutId)
+          }
+        }
+
+        process.on('SIGINT', cleanup)
+        process.on('SIGTERM', cleanup)
+        process.on('exit', cleanup)
+      })
+    }
+
+    return new Promise((resolve, reject) => {
+      const results: string[] = []
+      const child = spawn(command, args)
+
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', (data: string) => {
+        const lines = data.trim().split('\n')
+        for (const line of lines) {
+          if (line.length > 0) {
+            results.push(line)
+          }
+        }
+      })
+
+      child.stderr.on('data', (data: string) => {
+        reject(new Error(`mdfind error: ${data}`))
+      })
+
+      child.on('close', (code: number | null) => {
+        if (code !== null && code !== 0) {
+          reject(new Error(`mdfind exited with code ${code}`))
+        }
+        resolve(results)
+      })
+    })
+  }
+
+  /**
+   * Execute the search query with live updates
+   * @param onResult Callback function that receives each result as it arrives
+   * @param onComplete Optional callback function called when the search completes
+   */
+  public executeLive(
+    onResult: (result: string) => void,
+    onComplete?: (results: string[]) => void
+  ): Promise<void> {
+    const args = [...this.query]
+    const command = 'mdfind'
+    const results: string[] = []
+    const emitter = new EventEmitter()
+    const child = spawn(command, ['-live', ...args])
+    let timeoutId: Timeout | undefined
+
+    // Set up timeout if specified
+    if (typeof this.options.timeout === 'number') {
+      timeoutId = setTimeout(() => {
+        child.kill()
+        emitter.emit('done')
+      }, this.options.timeout)
+    }
+
+    child.stdout.setEncoding('utf8')
+    child.stdout.on('data', (data: string) => {
+      const lines = data.trim().split('\n')
+      for (const line of lines) {
+        if (line.length > 0) {
+          results.push(line)
+          onResult(line)
+        }
+      }
+    })
+
+    child.stderr.on('data', (data: string) => {
+      throw new Error(`mdfind error: ${data}`)
+    })
+
+    child.on('close', (code: number | null) => {
+      if (code !== null && code !== 0) {
+        throw new Error(`mdfind exited with code ${code}`)
+      }
+      emitter.emit('done')
+    })
+
+    emitter.on('done', () => {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId)
+      }
+      if (onComplete !== undefined) {
+        onComplete(results)
+      }
+    })
+
+    // Handle process termination
+    const cleanup = (): void => {
+      child.kill()
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId)
+      }
+    }
+
+    process.on('SIGINT', cleanup)
+    process.on('SIGTERM', cleanup)
+    process.on('exit', cleanup)
+
+    return Promise.resolve()
+  }
+
+  /**
+   * Filter by file types using name patterns
+   */
+  public withFileTypes(types: string[]): this {
+    const pattern = `*.{${types.join(',')}}`
+    return this.named(pattern)
   }
 }
 /**
