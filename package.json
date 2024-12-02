@@ -38,7 +38,9 @@
     "examples:content-types": "tsx examples/content-types.ts",
     "examples:advanced-search": "tsx examples/advanced-search.ts",
     "examples:mdutil": "tsx examples/mdutil-status.ts",
-    "examples:mdimport": "tsx examples/mdimport.ts"
+    "examples:mdimport": "tsx examples/mdimport.ts",
+    "examples:date-queries": "tsx examples/date-queries.ts",
+    "examples:date-queries-live": "tsx examples/date-queries-live.ts"
   },
   "keywords": [
     "macos",
@@ -67,6 +69,8 @@
     "@typescript-eslint/parser": "^6.13.1",
     "@vitest/coverage-v8": "^0.34.6",
     "@vitest/ui": "^0.34.6",
+    "chalk": "^5.3.0",
+    "date-fns": "^4.1.0",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.1",
