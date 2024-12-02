@@ -4,12 +4,6 @@ import { existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-const logger = {
-  log: (message: string) => console.log(message),
-  error: (message: string, ...args: unknown[]) => console.error(message, ...args),
-  warn: (message: string) => console.warn(message)
-} as const
-
 const ICLOUD_DRIVE_BASE = '~/Library/Mobile Documents'
 
 function findHiddenDirectories(basePath: string): string[] {
@@ -17,7 +11,7 @@ function findHiddenDirectories(basePath: string): string[] {
   const absoluteBasePath = resolve(basePath.replace(/^~/, homedir()))
 
   if (!existsSync(absoluteBasePath)) {
-    logger.warn(`iCloud Drive path does not exist: ${absoluteBasePath}`)
+    console.warn(`iCloud Drive path does not exist: ${absoluteBasePath}`)
     return paths
   }
 
@@ -40,7 +34,7 @@ function findHiddenDirectories(basePath: string): string[] {
       }
     }
   } catch (error) {
-    logger.warn(`Failed to scan directory ${absoluteBasePath}: ${(error as Error).message}`)
+    console.warn(`Failed to scan directory ${absoluteBasePath}: ${(error as Error).message}`)
   }
 
   return paths
@@ -51,64 +45,64 @@ async function removeFromSpotlight(path: string): Promise<void> {
     // Resolve and validate the path
     const absolutePath = resolve(path)
     if (!existsSync(absolutePath)) {
-      logger.error(`Path does not exist: ${absolutePath}`)
+      console.error(`Path does not exist: ${absolutePath}`)
       return
     }
 
-    logger.log(`\nProcessing: ${absolutePath}`)
+    console.log(`\nProcessing: ${absolutePath}`)
 
     // First check if the path exists and its current status
     const status = await getIndexingStatus(absolutePath)
     if (!status.enabled) {
-      logger.log(`Indexing is already disabled for: ${absolutePath}`)
+      console.log(`Indexing is already disabled for: ${absolutePath}`)
     } else {
       // Disable indexing
-      logger.log('Disabling Spotlight indexing...')
+      console.log('Disabling Spotlight indexing...')
       const result = await setIndexing(absolutePath, false)
       if (result.success) {
-        logger.log(`Successfully disabled Spotlight indexing for: ${absolutePath}`)
+        console.log(`Successfully disabled Spotlight indexing for: ${absolutePath}`)
       } else {
-        logger.warn('Warning: Failed to verify indexing was disabled')
+        console.warn('Warning: Failed to verify indexing was disabled')
       }
     }
 
     // Check for any existing entries
-    logger.log('Checking for existing Spotlight entries...')
+    console.log('Checking for existing Spotlight entries...')
     const remainingEntries = await getIndexedEntries(absolutePath)
     if (remainingEntries.length > 0) {
-      logger.warn(`Found ${remainingEntries.length} existing Spotlight entries:`)
+      console.warn(`Found ${remainingEntries.length} existing Spotlight entries:`)
       for (const entry of remainingEntries) {
-        logger.warn(`  ${entry}`)
+        console.warn(`  ${entry}`)
       }
-      logger.warn(
+      console.warn(
         'You may want to wait for Spotlight to reindex or force a reindex to clear these entries'
       )
     } else {
-      logger.log('No existing Spotlight entries found')
+      console.log('No existing Spotlight entries found')
     }
   } catch (error) {
     if (error instanceof Error && (error as MdutilError).requiresRoot) {
-      logger.error('This operation requires root privileges. Please run with sudo.')
+      console.error('This operation requires root privileges. Please run with sudo.')
     } else {
-      logger.error('Failed to disable indexing:', (error as Error).message)
+      console.error('Failed to disable indexing:', (error as Error).message)
     }
   }
 }
 
 async function main(): Promise<void> {
-  logger.log('Discovering Hidden directories in iCloud Drive...')
+  console.log('Discovering Hidden directories in iCloud Drive...')
   const hiddenDirs = findHiddenDirectories(ICLOUD_DRIVE_BASE)
 
   if (hiddenDirs.length === 0) {
-    logger.warn('No Hidden directories found in iCloud Drive')
+    console.warn('No Hidden directories found in iCloud Drive')
     return
   }
 
-  logger.log(
+  console.log(
     `Found ${hiddenDirs.length} Hidden ${hiddenDirs.length === 1 ? 'directory' : 'directories'}:`
   )
   for (const dir of hiddenDirs) {
-    logger.log(`  ${dir}`)
+    console.log(`  ${dir}`)
   }
 
   // Process each directory
@@ -117,4 +111,4 @@ async function main(): Promise<void> {
   }
 }
 
-void main().catch(err => logger.error('Unhandled error:', err))
+void main().catch(err => console.error('Unhandled error:', err))

@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { mdfind } from 'mdfind-node'
+import { mdfind, type MdfindError } from 'mdfind-node'
 
 async function main() {
   try {
@@ -62,8 +62,12 @@ async function main() {
       cameraPhotos.slice(0, 3).map(p => p.split('/').pop())
     )
   } catch (error) {
-    console.error('Error:', error)
-    process.exit(1)
+    if (error instanceof Error && (error as MdfindError).stderr) {
+      console.error('Search failed:', error.message)
+      console.error('stderr:', (error as MdfindError).stderr)
+      process.exit(1)
+    }
+    throw error
   }
 }
 

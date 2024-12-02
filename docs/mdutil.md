@@ -185,6 +185,32 @@ for (const volume of volumes) {
 }
 ```
 
+### Remove from Spotlight
+
+The `removeFromSpotlight` function provides a convenient way to remove directories from Spotlight indexing:
+
+```typescript
+import { removeFromSpotlight, type MdutilError } from 'mdfind-node'
+
+// Remove a directory from Spotlight indexing
+try {
+  await removeFromSpotlight('/path/to/directory')
+  console.log('Directory removed from Spotlight')
+} catch (error) {
+  if (error instanceof Error && (error as MdutilError).requiresRoot) {
+    console.error('Root privileges required')
+  } else {
+    console.error('Failed:', (error as Error).message)
+  }
+}
+```
+
+The function performs several operations:
+
+1. Checks if the directory is indexed by Spotlight.
+2. If indexed, it removes the directory from Spotlight indexing.
+3. If the directory is not indexed, it does nothing.
+
 ## Notes
 
 1. Most operations require root privileges

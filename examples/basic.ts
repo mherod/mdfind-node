@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { mdfind, MdfindError } from 'mdfind-node'
+import { mdfind, type MdfindError } from 'mdfind-node'
 
 async function main() {
   try {
@@ -40,9 +40,9 @@ async function main() {
     console.log(`Found ${authorDocs.length} documents with authors`)
     console.log('First 3:', authorDocs.slice(0, 3))
   } catch (error) {
-    if (error instanceof MdfindError) {
+    if (error instanceof Error && (error as MdfindError).stderr) {
       console.error('Search failed:', error.message)
-      console.error('stderr:', error.stderr)
+      console.error('stderr:', (error as MdfindError).stderr)
       process.exit(1)
     }
     throw error
