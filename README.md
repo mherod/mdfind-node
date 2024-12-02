@@ -3,7 +3,7 @@
 > Supercharged macOS file and metadata search using `mdfind` for Node.js! ✨
 
 [![npm version](https://badge.fury.io/js/mdfind-node.svg)](https://www.npmjs.com/package/mdfind-node)
-[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Lint](https://github.com/mherod/mdfind-node/actions/workflows/lint.yml/badge.svg)](https://github.com/mherod/mdfind-node/actions/workflows/lint.yml)
 
 A powerful Node.js wrapper for macOS's Spotlight search (`mdfind`), bringing system-level search capabilities to your JavaScript applications.
@@ -346,6 +346,6 @@ pnpm examples:content-types
 
 ## 📄 License
 
-ISC © [Matthew Herod](https://github.com/mherod)
+MIT © [Matthew Herod](https://github.com/mherod)
 
 ---

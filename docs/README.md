@@ -32,4 +32,15 @@ Each macOS Spotlight command has its own dedicated documentation:
 
 ## Examples
 
-See the [examples](../examples) directory for working code samples.
+The `examples` directory contains working code samples demonstrating various features:
+
+- Basic search operations
+- Advanced query building
+- Live search monitoring
+- Batch operations
+- Metadata handling
+- Content type discovery
+- Index management
+- Remove paths from Spotlight
+
+See the [examples](../examples) directory for the complete collection of working code samples.
