@@ -65,9 +65,9 @@ const photos = await new QueryBuilder()
   .inDirectory('~/Pictures')
   .execute()
 
-// Find large video files
+// Find large media files
 const videos = await new QueryBuilder()
-  .isMovie()
+  .isAudiovisual()
   .largerThan(100 * 1024 * 1024) // > 100MB
   .inDirectory('~/Movies')
   .execute()
@@ -84,7 +84,7 @@ import { QueryBuilder } from 'mdfind-node'
 
 // Find documents by author
 const authorDocs = await new QueryBuilder()
-  .isPDF()
+  .contentType('com.adobe.pdf')
   .author('John Doe')
   .createdAfter(new Date('2024-01-01'))
   .inDirectory('~/Documents')
@@ -100,9 +100,9 @@ const cameraPhotos = await new QueryBuilder()
 
 // Find code files with specific content
 const codeFiles = await new QueryBuilder()
-  .isSourceCode()
+  .isText()
   .extension('ts')
-  .contains('QueryBuilder')
+  .containing('QueryBuilder')
   .modifiedAfter(new Date('2024-01-01'))
   .execute()
 
@@ -138,21 +138,44 @@ const search = mdfindLive(
 ### 📦 Batch Operations
 
 ```typescript
-import { QueryBuilder, mdfindBatch } from 'mdfind-node'
+import { QueryBuilder } from 'mdfind-node'
+import { batchSearch } from 'mdfind-node'
 
 // Create multiple queries
-const imageQuery = new QueryBuilder()
-  .contentType('public.image')
-  .minImageDimensions(1920, 1080)
-  .toString()
-
-const docQuery = new QueryBuilder().isPDF().modifiedAfter(new Date('2024-01-01')).toString()
+const searches = [
+  {
+    query: new QueryBuilder().contentType('public.image').minImageDimensions(1920, 1080).toString(),
+    options: { onlyInDirectory: '~/Pictures' }
+  },
+  {
+    query: new QueryBuilder()
+      .contentType('com.adobe.pdf')
+      .modifiedAfter(new Date('2024-01-01'))
+      .toString(),
+    options: { onlyInDirectory: '~/Documents' }
+  }
+]
 
 // Run them in parallel
-const results = await mdfindBatch([
-  { query: imageQuery, onlyIn: '~/Pictures' },
-  { query: docQuery, onlyIn: '~/Documents' }
-])
+const results = await batchSearch(searches)
+
+// Or use utility functions for common patterns
+import { mdfindMultiDirectory, mdfindMultiQuery } from 'mdfind-node'
+
+// Search same query across multiple directories
+const directoryResults = await mdfindMultiDirectory(
+  new QueryBuilder().contentType('public.image').toString(),
+  ['~/Pictures', '~/Documents']
+)
+
+// Search multiple queries in one directory
+const queryResults = await mdfindMultiQuery(
+  [
+    new QueryBuilder().contentType('public.image').toString(),
+    new QueryBuilder().contentType('com.adobe.pdf').toString()
+  ],
+  '~/Documents'
+)
 ```
 
 ### 📝 Extended Metadata
@@ -183,7 +206,7 @@ const mediaFiles = await new QueryBuilder()
   .execute()
 
 // Find applications
-const apps = await new QueryBuilder().isBundle().inDirectory('/Applications').execute()
+const apps = await new QueryBuilder().isApplication().inDirectory('/Applications').execute()
 
 // Find configuration files
 const configs = await new QueryBuilder().isPlist().inDirectory('~/Library/Preferences').execute()
@@ -191,7 +214,7 @@ const configs = await new QueryBuilder().isPlist().inDirectory('~/Library/Prefer
 // Find development files
 const devFiles = await new QueryBuilder()
   .useOperator('||')
-  .isSourceCode()
+  .isText()
   .isMarkdown()
   .isJSON()
   .isYAML()

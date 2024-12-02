@@ -12,6 +12,8 @@ The Query Builder provides a fluent interface for constructing Spotlight queries
 - Metadata attribute matching
 - Directory scoping
 - Natural language interpretation
+- Live search support
+- Parallel and sequential execution
 
 ## Basic Usage
 
@@ -35,189 +37,216 @@ const query = new QueryBuilder()
 // Single type
 query.contentType('public.image')
 
-// Predefined type filters
+// Specialized type methods
 query.isText() // public.text
 query.isAudiovisual() // public.audiovisual-content
 query.isBundle() // com.apple.bundle
-query.isApplication() // com.apple.application-bundle
-query.isPreferencePane() // com.apple.systempreference
+query.isPDF() // com.adobe.pdf
 query.isMarkdown() // net.daringfireball.markdown
 query.isPlist() // com.apple.property-list
-query.isPDF() // com.adobe.pdf
 query.isJSON() // public.json
 query.isYAML() // public.yaml
+query.isApplication() // com.apple.application-bundle
+query.isPreferencePane() // com.apple.systempreference
+query.isComposite() // public.composite-content
 ```
 
 ### Date Filters
 
 ```typescript
 // Creation date
-query.createdBefore(new Date())
-query.createdAfter(new Date('2023-01-01'))
+query.createdAfter(new Date('2024-01-01'))
+query.createdBefore(new Date('2024-12-31'))
 
 // Modification date
-query.modifiedBefore(new Date())
-query.modifiedAfter(new Date('2023-01-01'))
+query.modifiedAfter(new Date('2024-01-01'))
+query.modifiedBefore(new Date('2024-12-31'))
 
 // Last opened
-query.lastOpenedAfter(new Date('2023-01-01'))
+query.lastOpenedAfter(new Date('2024-01-01'))
 ```
 
-### Text Content
+### Size Filters
 
 ```typescript
-// Full text search
-query.containing('searchterm')
-
-// Specific attributes
-query.author('John Doe')
-query.byAuthor('John Doe') // Alias for author()
-query.hasKeyword('typescript')
-```
-
-### File Properties
-
-```typescript
-// Name patterns
-query.named('*.pdf')
-query.extension('jpg')
-
 // Size constraints
-query.largerThan(1024 * 1024) // 1MB
-query.smallerThan(1024 * 1024) // 1MB
+query.largerThan(1024 * 1024) // > 1MB
+query.smallerThan(1024 * 100) // < 100KB
+```
 
-// Location
-query.inDirectory('~/Documents')
+### File Name and Extension
 
-// System properties
+```typescript
+// Name pattern
+query.named('project-*')
+
+// Extension
+query.extension('pdf')
+
+// Multiple extensions
+query.useOperator('||').extension('jpg').extension('png').extension('gif')
+```
+
+### Author and Creator
+
+```typescript
+// Author
+query.author('John Doe')
+query.byAuthor('Jane Smith') // Alias for author()
+
+// Encoding application
+query.encodedBy('Adobe Photoshop')
+```
+
+### Content and Text
+
+```typescript
+// Text content
+query.containing('important')
+
+// Natural language interpretation
+query.where('images created today').interpret()
+
+// Literal query
+query.where('kMDItemFSName == "*.txt"').literal()
+```
+
+### Image-specific Filters
+
+```typescript
+// Dimensions
+query.minImageDimensions(1920, 1080)
+
+// Camera information
+query.takenWith('Canon') // Camera make
+query.usingModel('EOS R5') // Camera model
+query.withISO(100, 400) // ISO range
+query.withFocalLength(24, 70) // Focal length range
+query.inColorSpace('RGB') // Color space
+query.withBitDepth(16) // Bits per sample
+query.hasGPS() // Has location data
+```
+
+### Audio-specific Filters
+
+```typescript
+// Music metadata
+query.inGenre('Jazz')
+query.recordedIn(2024)
+query.inAlbum('Greatest Hits')
+query.byComposer('Mozart')
+```
+
+### File System Attributes
+
+```typescript
+// File system properties
 query.hasLabel(2) // Finder label color (0-7)
 query.isInvisible() // Hidden files
 query.ownedBy(501) // File owner by UID
 ```
 
-### Media Properties
+### Search Options
 
 ```typescript
-// Images
-query.minImageDimensions(1920, 1080)
-query.inColorSpace('RGB')
-query.withBitDepth(16)
-
-// Audio
-query.minAudioQuality(44100, 320000)
-query.inGenre('Jazz')
-query.recordedIn(2024)
-query.inAlbum('Greatest Hits')
-query.byComposer('Mozart')
-
-// Camera info
-query.takenWith('Canon') // Camera make
-query.usingModel('EOS R5') // Camera model
-query.withISO(100, 400) // ISO range
-query.withFocalLength(24, 70) // Focal length range
-```
-
-### Location Data
-
-```typescript
-// GPS information
-query.hasGPS() // Files with location data
-```
-
-### Custom Queries
-
-```typescript
-// Raw attribute queries
-query.where('kMDItemPixelHeight > 1080')
-query.where('kMDItemPixelWidth > 1920')
-
-// Multiple conditions
-query.useOperator('||') // Change default AND to OR
-query.where('condition1')
-query.where('condition2')
-```
-
-## Search Options
-
-```typescript
-// Natural language queries
-query.interpret() // Enable query interpretation
-query.literal() // Disable special interpretation
-
-// Result options
-query.count() // Return only count
-query.attribute('kMDItemPixelHeight') // Return specific attribute
-
-// Performance
+// Buffer size for results
 query.maxBuffer(5 * 1024 * 1024) // 5MB buffer
+
+// Count only
+query.count()
+
+// Specific attributes
+query.attribute('kMDItemPixelHeight')
+
+// Directory scope
+query.inDirectory('~/Documents')
 ```
 
-## Execution
+### Operator Control
 
 ```typescript
-// Execute query
-const results = await query.execute()
+// Default is AND ('&&')
+query.contentType('public.image').largerThan(1024 * 1024) // AND
 
-// Get query string
-console.log(query.toString())
+// Switch to OR ('||')
+query.useOperator('||').extension('jpg').extension('png') // OR
 ```
 
-## Best Practices
-
-1. Chain related conditions together for readability
-2. Use predefined type filters over raw content types
-3. Scope searches to specific directories when possible
-4. Set appropriate buffer size for large result sets
-5. Use natural language interpretation for user input
-
-## Examples
-
-### Finding Recent Documents
+## Live Search
 
 ```typescript
-const docs = await new QueryBuilder()
-  .isText()
-  .modifiedAfter(new Date(Date.now() - 86400000)) // Last 24 hours
-  .inDirectory('~/Documents')
-  .execute()
+const builder = new QueryBuilder({ live: true, timeout: 5000 })
+
+await builder
+  .contentType('public.image')
+  .inDirectory('~/Downloads')
+  .executeLive(
+    file => console.log('Found:', file),
+    () => console.log('Search complete')
+  )
 ```
 
-### High-Resolution Photos
+## Complex Examples
+
+### High-res Photos with GPS
 
 ```typescript
 const photos = await new QueryBuilder()
   .contentType('public.image')
   .minImageDimensions(3000, 2000)
   .hasGPS()
-  .createdAfter(new Date('2023-01-01'))
+  .takenWith('Sony')
+  .modifiedAfter(new Date('2024-01-01'))
   .execute()
 ```
 
-### Audio Files
+### Recent Documents by Author
 
 ```typescript
-const audio = await new QueryBuilder()
+const docs = await new QueryBuilder()
+  .useOperator('&&')
+  .isPDF()
+  .author('John Doe')
+  .modifiedAfter(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+  .inDirectory('~/Documents')
+  .execute()
+```
+
+### Music Collection Analysis
+
+```typescript
+const jazzTracks = await new QueryBuilder()
   .contentType('public.audio')
-  .minAudioQuality(44100, 320000)
   .inGenre('Jazz')
+  .recordedIn(2024)
   .byComposer('Miles Davis')
   .execute()
 ```
 
-### Multiple Extensions
+### System Files
 
 ```typescript
-const images = await new QueryBuilder()
+const systemPrefs = await new QueryBuilder()
   .useOperator('||')
-  .extension('jpg')
-  .extension('png')
-  .extension('gif')
+  .isPreferencePane()
+  .isPlist()
+  .inDirectory('/System/Library')
   .execute()
 ```
+
+## Best Practices
+
+1. Use specialized type methods (`isPDF()`, `isMarkdown()`) instead of raw content types when available
+2. Set appropriate buffer sizes for large result sets
+3. Use `live` search with timeout for real-time updates
+4. Combine conditions logically with `useOperator()`
+5. Use `interpret()` for natural language queries
+6. Set directory scope with `inDirectory()` to limit search space
 
 ## See Also
 
 - [mdfind Documentation](./mdfind.md) - Core search functionality
+- [Batch Operations](./batch.md) - Running multiple searches
 - [Attributes Documentation](./attributes.md) - Available metadata attributes
 - [Content Types](./content-types.md) - Understanding UTI system
 

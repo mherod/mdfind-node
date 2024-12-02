@@ -1,250 +1,170 @@
 # Batch Operations Documentation
 
-> Efficient batch processing for Spotlight operations
+> Efficient batch processing for Spotlight searches
 
 ## Overview
 
-The batch operations module provides efficient ways to process multiple files or operations in parallel. Features include:
+The batch operations module provides efficient ways to process multiple Spotlight searches in parallel or sequentially. Features include:
 
-- Parallel processing
-- Progress tracking
-- Error handling
-- Memory efficiency
-- Result ordering
+- Parallel search execution
+- Sequential search execution
+- Multi-directory searching
+- Multi-query searching
+- Result ordering preservation
 
 ## Basic Usage
 
-### Batch Metadata Extraction
+### Parallel Search Operations
 
 ```typescript
-import { mdlsBatch } from 'mdfind-node'
+import { QueryBuilder } from 'mdfind-node'
+import { batchSearch } from 'mdfind-node'
 
-const files = ['file1.jpg', 'file2.jpg', 'file3.jpg']
-
-const results = await mdlsBatch(files, {
-  attributes: ['kMDItemContentType', 'kMDItemPixelHeight']
-})
-
-// Results maintain file order
-for (const [file, metadata] of results) {
-  console.log(`${file}: ${metadata.basic.contentType}`)
-}
-```
-
-### Batch Search Operations
-
-```typescript
-import { mdfindBatch } from 'mdfind-node'
-
-const queries = [
-  'kMDItemContentType == "public.image"',
-  'kMDItemContentType == "public.movie"',
-  'kMDItemContentType == "public.audio"'
+const searches = [
+  {
+    query: new QueryBuilder().contentType('public.image').hasGPS().toString(),
+    options: { onlyInDirectory: '~/Pictures' }
+  },
+  {
+    query: new QueryBuilder().contentType('public.audio').toString(),
+    options: { onlyInDirectory: '~/Music' }
+  }
 ]
 
-const results = await mdfindBatch(queries)
-
-// Results maintain query order
-for (const [query, paths] of results) {
-  console.log(`${query}: ${paths.length} matches`)
-}
+const results = await batchSearch(searches)
+// results[0] contains image search results
+// results[1] contains audio search results
 ```
 
-### Batch Index Management
+### Sequential Search Operations
 
 ```typescript
-import { mdutilBatch } from 'mdfind-node'
+import { batchSearchSequential } from 'mdfind-node'
 
-const volumes = ['/Volumes/Data1', '/Volumes/Data2', '/Volumes/Data3']
+const searches = [
+  {
+    query: 'kind:image',
+    options: { onlyInDirectory: '~/Pictures' }
+  },
+  {
+    query: 'kind:pdf',
+    options: { onlyInDirectory: '~/Documents' }
+  }
+]
 
-// Enable indexing on multiple volumes
-const results = await mdutilBatch.enable(volumes)
+const results = await batchSearchSequential(searches)
+// Results are processed one at a time
+```
 
-for (const [volume, success] of results) {
-  console.log(`${volume}: ${success ? 'enabled' : 'failed'}`)
-}
+## Utility Functions
+
+### Search Across Multiple Directories
+
+```typescript
+import { mdfindMultiDirectory } from 'mdfind-node'
+
+const query = new QueryBuilder()
+  .extension('ts')
+  .modifiedAfter(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Last week
+  .toString()
+
+const directories = ['~/Documents', '~/Downloads', '~/Desktop']
+
+const results = await mdfindMultiDirectory(query, directories)
+// results[0] contains matches from Documents
+// results[1] contains matches from Downloads
+// results[2] contains matches from Desktop
+```
+
+### Multiple Queries in One Directory
+
+```typescript
+import { mdfindMultiQuery } from 'mdfind-node'
+
+const queries = [
+  new QueryBuilder().contentType('public.image').hasGPS().toString(),
+  new QueryBuilder().contentType('public.movie').toString(),
+  new QueryBuilder().contentType('com.adobe.pdf').toString()
+]
+
+const documentsPath = '~/Documents'
+const results = await mdfindMultiQuery(queries, documentsPath)
+// results[0] contains image matches
+// results[1] contains movie matches
+// results[2] contains PDF matches
 ```
 
 ## Options
 
-All batch operations accept these common options:
+All search operations accept the standard mdfind options:
 
-| Option        | Type      | Default | Description                  |
-| ------------- | --------- | ------- | ---------------------------- |
-| `concurrency` | `number`  | `4`     | Maximum parallel operations  |
-| `timeout`     | `number`  | `30000` | Operation timeout (ms)       |
-| `stopOnError` | `boolean` | `false` | Stop on first error          |
-| `retries`     | `number`  | `0`     | Retry attempts per operation |
-| `retryDelay`  | `number`  | `1000`  | Delay between retries (ms)   |
-
-## Progress Monitoring
-
-Track progress of batch operations:
-
-```typescript
-import { mdlsBatch } from 'mdfind-node'
-
-const files = ['file1.jpg', 'file2.jpg', 'file3.jpg']
-
-const results = await mdlsBatch(files, {
-  onProgress: (completed, total) => {
-    console.log(`Progress: ${completed}/${total}`)
-  },
-  onError: (file, error) => {
-    console.error(`Failed to process ${file}:`, error)
-  }
-})
-```
-
-## Error Handling
-
-Batch operations provide detailed error information:
-
-```typescript
-import { mdlsBatch, BatchError } from 'mdfind-node'
-
-try {
-  await mdlsBatch(files)
-} catch (error) {
-  if (error instanceof BatchError) {
-    console.error('Batch operation failed:', error.message)
-    console.error('Failed items:', error.failures)
-
-    // Individual operation errors
-    for (const [item, err] of error.failures) {
-      console.error(`${item}:`, err.message)
-    }
-  }
-}
-```
-
-## Advanced Usage
-
-### Custom Batch Processing
-
-```typescript
-import { batch } from 'mdfind-node'
-
-// Define custom operation
-const processor = async (file: string) => {
-  const metadata = await mdls(file)
-  const searchResults = await mdfind(`kMDItemContentType == "${metadata.basic.contentType}"`)
-  return searchResults
-}
-
-// Process in batch
-const results = await batch(files, processor, {
-  concurrency: 2,
-  timeout: 60000
-})
-```
-
-### Batch with Query Builder
-
-```typescript
-import { QueryBuilder, mdfindBatch } from 'mdfind-node'
-
-// Create multiple queries
-const queries = [
-  new QueryBuilder().contentType('public.image').minImageDimensions(1920, 1080),
-  new QueryBuilder().contentType('public.movie').minDuration(300)
-]
-
-// Execute in batch
-const results = await mdfindBatch(queries)
-```
-
-### Batch Import Operations
-
-```typescript
-import { mdimportBatch } from 'mdfind-node'
-
-const files = ['file1.pdf', 'file2.pdf', 'file3.pdf']
-
-const results = await mdimportBatch(files, {
-  plugin: 'com.adobe.pdf',
-  attributes: {
-    kMDItemKeywords: ['imported', 'batch']
-  }
-})
-```
+| Option            | Type      | Default | Description                            |
+| ----------------- | --------- | ------- | -------------------------------------- |
+| `onlyInDirectory` | `string`  | -       | Limit search to specific directory     |
+| `maxBuffer`       | `number`  | `1MB`   | Maximum buffer size for results        |
+| `literal`         | `boolean` | `false` | Disable special query interpretation   |
+| `interpret`       | `boolean` | `false` | Enable natural language interpretation |
+| `nullSeparator`   | `boolean` | `false` | Use null character as separator        |
+| `reprint`         | `boolean` | `false` | Reprint results in live mode           |
 
 ## Best Practices
 
-1. Choose appropriate concurrency for system resources
-2. Use timeouts to prevent hanging operations
-3. Implement retry logic for network operations
-4. Monitor memory usage with large batches
-5. Group similar operations for better performance
+1. Use `batchSearch` for independent queries that can run in parallel
+2. Use `batchSearchSequential` when order matters or for memory-intensive searches
+3. Use `mdfindMultiDirectory` when searching the same pattern across different locations
+4. Use `mdfindMultiQuery` when running multiple different searches in the same location
+5. Set appropriate `maxBuffer` values for large result sets
 
 ## Examples
 
-### Processing Directory Contents
+### Complex Search Patterns
 
 ```typescript
-import { mdlsBatch } from 'mdfind-node'
-import { readdir } from 'fs/promises'
+import { QueryBuilder } from 'mdfind-node'
+import { batchSearch } from 'mdfind-node'
 
-// Get all JPEGs in directory
-const dir = '~/Pictures'
-const files = (await readdir(dir)).filter(f => f.endsWith('.jpg')).map(f => `${dir}/${f}`)
-
-// Process in batches of 10
-const results = await mdlsBatch(files, {
-  concurrency: 10,
-  attributes: ['kMDItemPixelHeight', 'kMDItemPixelWidth']
-})
-```
-
-### Batch Status Checks
-
-```typescript
-import { mdutilBatch } from 'mdfind-node'
-
-// Check multiple volumes
-const volumes = ['/Volumes/Data1', '/Volumes/Data2']
-const status = await mdutilBatch.status(volumes)
-
-for (const [volume, info] of status) {
-  console.log(`${volume}:`)
-  console.log(`  Indexing: ${info.indexing}`)
-  console.log(`  Progress: ${info.progressPercent}%`)
-}
-```
-
-### Mixed Operations
-
-```typescript
-import { batch, mdls, mdfind } from 'mdfind-node'
-
-// Complex processing
-const processor = async (file: string) => {
-  // Get file metadata
-  const metadata = await mdls(file)
-
-  // Find similar files
-  const similar = await mdfind(
-    `kMDItemContentType == "${metadata.basic.contentType}" && ` +
-      `kMDItemPixelHeight == ${metadata.exif.pixelHeight}`
-  )
-
-  return {
-    metadata,
-    similar
+// Find different types of media files
+const searches = [
+  {
+    query: new QueryBuilder().contentType('public.image').minImageDimensions(1920, 1080).toString(),
+    options: { onlyInDirectory: '~/Pictures' }
+  },
+  {
+    query: new QueryBuilder().contentType('public.audio').inGenre('Jazz').toString(),
+    options: { onlyInDirectory: '~/Music' }
+  },
+  {
+    query: new QueryBuilder()
+      .contentType('public.movie')
+      .largerThan(1024 * 1024 * 1024) // > 1GB
+      .toString(),
+    options: { onlyInDirectory: '~/Movies' }
   }
-}
+]
 
-const results = await batch(files, processor)
+const results = await batchSearch(searches)
+```
+
+### Directory-Specific Searches
+
+```typescript
+import { mdfindMultiDirectory } from 'mdfind-node'
+
+// Search for recent files across common directories
+const query = new QueryBuilder()
+  .modifiedAfter(new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
+  .toString()
+
+const directories = ['~/Desktop', '~/Downloads', '~/Documents']
+
+const results = await mdfindMultiDirectory(query, directories)
 ```
 
 ## See Also
 
-- [mdls Documentation](./mdls.md) - Metadata extraction
-- [mdfind Documentation](./mdfind.md) - File search
-- [mdutil Documentation](./mdutil.md) - Index management
-- [mdimport Documentation](./mdimport.md) - File import
+- [mdfind Documentation](./mdfind.md) - Core search functionality
+- [Query Builder Documentation](./query-builder.md) - Building search queries
 
 ## References
 
-- [Node.js Worker Threads](https://nodejs.org/api/worker_threads.html)
-- [Spotlight Architecture](https://developer.apple.com/library/archive/documentation/Carbon/Conceptual/MetadataIntro/MetadataIntro.html)
+- [Spotlight Query Format](https://developer.apple.com/library/archive/documentation/Carbon/Conceptual/SpotlightQuery/Concepts/QueryFormat.html)
