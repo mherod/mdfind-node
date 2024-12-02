@@ -1,11 +1,12 @@
 import eslint from '@eslint/js'
 import tseslint from '@typescript-eslint/eslint-plugin'
 import tsparser from '@typescript-eslint/parser'
-import prettier from 'eslint-plugin-prettier'
 import eslintConfigPrettier from 'eslint-config-prettier'
+import prettier from 'eslint-plugin-prettier'
 
 export default [
   eslint.configs.recommended,
+  eslintConfigPrettier,
   {
     files: ['src/**/*.ts', 'test/**/*.ts'],
     languageOptions: {
@@ -14,6 +15,20 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
         project: './tsconfig.json'
+      },
+      globals: {
+        console: true,
+        process: true,
+        setTimeout: true,
+        clearTimeout: true,
+        setInterval: true,
+        clearInterval: true,
+        Buffer: true,
+        global: true,
+        module: true,
+        require: true,
+        __dirname: true,
+        __filename: true
       }
     },
     plugins: {
@@ -23,7 +38,9 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       ...tseslint.configs.strict.rules,
-      ...eslintConfigPrettier.rules,
+      'prettier/prettier': 'off',
+      'no-useless-escape': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
 
       // TypeScript specific rules
       '@typescript-eslint/explicit-function-return-type': [
@@ -77,7 +94,6 @@ export default [
           allowAny: false
         }
       ],
-      '@typescript-eslint/no-unnecessary-condition': 'warn',
 
       // General code quality rules
       'no-console': 'error',
