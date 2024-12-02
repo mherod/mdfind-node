@@ -11,24 +11,35 @@ The `mdls` utility lists metadata attributes for files. Features include:
 - Raw data output
 - Automatic type coercion
 - Null value handling
+- Structured metadata output
 
 ## Basic Usage
 
 ```typescript
 import { getMetadata } from 'mdfind-node'
 
-// Get all metadata
-const metadata = await getMetadata('path/to/file.jpg')
+// Get all metadata in structured format
+const metadata = await getMetadata('path/to/file.jpg', {
+  structured: true
+})
+
+// Access through categories
+console.log(metadata.basic) // Basic file info
+console.log(metadata.exif) // EXIF data (if available)
+console.log(metadata.xmp) // XMP data (if available)
+console.log(metadata.spotlight) // Raw Spotlight attributes
 
 // Get specific attributes
-const attributes = await getMetadata('path/to/file.jpg', {
-  attributes: ['kMDItemContentType', 'kMDItemPixelHeight']
+const metadata = await getMetadata('path/to/file.jpg', {
+  attributes: ['kMDItemContentType', 'kMDItemPixelHeight'],
+  structured: true
 })
 
 // Raw output with custom null marker
-const raw = await getMetadata('path/to/file.jpg', {
+const metadata = await getMetadata('path/to/file.jpg', {
   raw: true,
-  nullMarker: 'N/A'
+  nullMarker: 'N/A',
+  structured: true
 })
 ```
 
@@ -39,6 +50,7 @@ const raw = await getMetadata('path/to/file.jpg', {
 | `attributes` | `string[]` | `[]`       | List of specific attributes to retrieve   |
 | `raw`        | `boolean`  | `false`    | Return raw attribute values               |
 | `nullMarker` | `string`   | `'(null)'` | String to use for null values in raw mode |
+| `structured` | `boolean`  | `false`    | Return metadata in structured format      |
 
 ## Type Coercion
 
@@ -49,12 +61,17 @@ The utility automatically coerces values to appropriate types:
 Attributes containing "Date" or "date" are converted to Date objects:
 
 ```typescript
-const metadata = await getMetadata('file.txt')
+const metadata = await getMetadata('file.txt', { structured: true })
 
 // Date objects
-metadata.kMDItemContentCreationDate // Date
-metadata.kMDItemContentModificationDate // Date
-metadata.kMDItemLastUsedDate // Date
+metadata.spotlight.kMDItemContentCreationDate // Date
+metadata.spotlight.kMDItemContentModificationDate // Date
+metadata.spotlight.kMDItemLastUsedDate // Date
+
+// Or use structured format
+console.log(metadata.basic.created) // Date
+console.log(metadata.basic.modified) // Date
+console.log(metadata.basic.lastOpened) // Date
 ```
 
 ### Numbers
@@ -73,12 +90,16 @@ Attributes containing these terms are converted to numbers:
 - Time
 
 ```typescript
-const metadata = await getMetadata('image.jpg')
+const metadata = await getMetadata('image.jpg', { structured: true })
 
-// Numbers
-metadata.kMDItemFSSize // number
-metadata.kMDItemPixelHeight // number
-metadata.kMDItemDurationSeconds // number
+// Numbers through spotlight
+metadata.spotlight.kMDItemFSSize // number
+metadata.spotlight.kMDItemPixelHeight // number
+metadata.spotlight.kMDItemDurationSeconds // number
+
+// Or use structured format
+console.log(metadata.basic.size) // number
+console.log(metadata.exif?.focalLength) // number
 ```
 
 ### Arrays
@@ -86,12 +107,15 @@ metadata.kMDItemDurationSeconds // number
 Values in parentheses are parsed as arrays:
 
 ```typescript
-const metadata = await getMetadata('document.pdf')
+const metadata = await getMetadata('document.pdf', { structured: true })
 
-// Arrays
-metadata.kMDItemAuthors // string[]
-metadata.kMDItemKeywords // string[]
-metadata.kMDItemLanguages // string[]
+// Arrays through spotlight
+metadata.spotlight.kMDItemAuthors // string[]
+metadata.spotlight.kMDItemKeywords // string[]
+metadata.spotlight.kMDItemLanguages // string[]
+
+// Or use structured format
+console.log(metadata.xmp?.subject) // string[]
 ```
 
 ### Booleans
@@ -99,11 +123,11 @@ metadata.kMDItemLanguages // string[]
 "true" and "false" strings are converted to booleans:
 
 ```typescript
-const metadata = await getMetadata('file.txt')
+const metadata = await getMetadata('file.txt', { structured: true })
 
-// Booleans
-metadata.kMDItemHasAlphaChannel // boolean
-metadata.kMDItemIsEncrypted // boolean
+// Booleans through spotlight
+metadata.spotlight.kMDItemHasAlphaChannel // boolean
+metadata.spotlight.kMDItemIsEncrypted // boolean
 ```
 
 ## Error Handling
@@ -114,7 +138,7 @@ The utility throws standard Error objects with descriptive messages:
 import { getMetadata } from 'mdfind-node'
 
 try {
-  await getMetadata('nonexistent.file')
+  await getMetadata('nonexistent.file', { structured: true })
 } catch (error) {
   console.error('Failed to get metadata:', error.message)
 }
@@ -125,38 +149,58 @@ try {
 ### File System Attributes
 
 ```typescript
-kMDItemFSName // File name
-kMDItemFSSize // File size in bytes
-kMDItemFSCreationDate // Creation date
-kMDItemFSContentChangeDate // Content modification date
-kMDItemFSOwnerUserID // Owner user ID
-kMDItemFSInvisible // Hidden file flag
+// Through spotlight
+metadata.spotlight.kMDItemFSName // File name
+metadata.spotlight.kMDItemFSSize // File size in bytes
+metadata.spotlight.kMDItemFSCreationDate // Creation date
+metadata.spotlight.kMDItemFSContentChangeDate // Content modification date
+metadata.spotlight.kMDItemFSOwnerUserID // Owner user ID
+metadata.spotlight.kMDItemFSInvisible // Hidden file flag
+
+// Or through basic metadata
+metadata.basic.name // File name
+metadata.basic.size // File size in bytes
+metadata.basic.created // Creation date
+metadata.basic.modified // Modification date
 ```
 
 ### Content Attributes
 
 ```typescript
-kMDItemContentType // UTI type
-kMDItemContentTypeTree // Type hierarchy
-kMDItemKind // Localized type description
-kMDItemDisplayName // Display name
-kMDItemTitle // Document title
-kMDItemAuthors // Author array
-kMDItemTextContent // Extracted text
-kMDItemEncodingApplications // Creating application
+// Through spotlight
+metadata.spotlight.kMDItemContentType // UTI type
+metadata.spotlight.kMDItemContentTypeTree // Type hierarchy
+metadata.spotlight.kMDItemKind // Localized type description
+metadata.spotlight.kMDItemDisplayName // Display name
+metadata.spotlight.kMDItemTitle // Document title
+metadata.spotlight.kMDItemAuthors // Author array
+metadata.spotlight.kMDItemTextContent // Extracted text
+metadata.spotlight.kMDItemEncodingApplications // Creating application
+
+// Or through structured metadata
+metadata.basic.contentType // UTI type
+metadata.basic.kind // Localized type description
+metadata.xmp?.title // Document title
+metadata.xmp?.creator // Author
 ```
 
 ### Media Attributes
 
 ```typescript
-kMDItemPixelHeight // Image height
-kMDItemPixelWidth // Image width
-kMDItemColorSpace // Color space
-kMDItemBitsPerSample // Color depth
-kMDItemDurationSeconds // Media duration
-kMDItemCodecs // Media codecs
-kMDItemAudioBitRate // Audio quality
-kMDItemAudioSampleRate // Sample rate
+// Through spotlight
+metadata.spotlight.kMDItemPixelHeight // Image height
+metadata.spotlight.kMDItemPixelWidth // Image width
+metadata.spotlight.kMDItemColorSpace // Color space
+metadata.spotlight.kMDItemBitsPerSample // Color depth
+metadata.spotlight.kMDItemDurationSeconds // Media duration
+metadata.spotlight.kMDItemCodecs // Media codecs
+metadata.spotlight.kMDItemAudioBitRate // Audio quality
+metadata.spotlight.kMDItemAudioSampleRate // Sample rate
+
+// Or through EXIF data
+metadata.exif?.focalLength // Focal length
+metadata.exif?.fNumber // F-number
+metadata.exif?.isoSpeed // ISO speed
 ```
 
 ## Notes
@@ -166,18 +210,27 @@ kMDItemAudioSampleRate // Sample rate
 3. Array values are always split on commas
 4. Empty arrays are returned as empty arrays, not null
 5. Invalid dates remain as strings
+6. EXIF and XMP data may be undefined if not available
+7. Use structured mode for better type safety and organization
 
 ## Examples
 
 ### Basic Metadata
 
 ```typescript
-const metadata = await getMetadata('document.pdf')
+const metadata = await getMetadata('document.pdf', { structured: true })
 
-console.log('Name:', metadata.kMDItemDisplayName)
-console.log('Size:', metadata.kMDItemFSSize)
-console.log('Type:', metadata.kMDItemContentType)
-console.log('Created:', metadata.kMDItemContentCreationDate)
+// Through basic metadata
+console.log('Name:', metadata.basic.name)
+console.log('Size:', metadata.basic.size)
+console.log('Type:', metadata.basic.contentType)
+console.log('Created:', metadata.basic.created)
+
+// Or through spotlight
+console.log('Name:', metadata.spotlight.kMDItemDisplayName)
+console.log('Size:', metadata.spotlight.kMDItemFSSize)
+console.log('Type:', metadata.spotlight.kMDItemContentType)
+console.log('Created:', metadata.spotlight.kMDItemContentCreationDate)
 ```
 
 ### Image Metadata
@@ -189,24 +242,52 @@ const metadata = await getMetadata('photo.jpg', {
     'kMDItemPixelWidth',
     'kMDItemColorSpace',
     'kMDItemBitsPerSample'
-  ]
+  ],
+  structured: true
 })
 
-console.log('Dimensions:', metadata.kMDItemPixelWidth, 'x', metadata.kMDItemPixelHeight)
-console.log('Color:', metadata.kMDItemColorSpace, metadata.kMDItemBitsPerSample, 'bit')
+// Through spotlight
+console.log(
+  'Dimensions:',
+  metadata.spotlight.kMDItemPixelWidth,
+  'x',
+  metadata.spotlight.kMDItemPixelHeight
+)
+console.log(
+  'Color:',
+  metadata.spotlight.kMDItemColorSpace,
+  metadata.spotlight.kMDItemBitsPerSample,
+  'bit'
+)
+
+// Or through EXIF data
+if (metadata.exif) {
+  console.log('Camera:', metadata.exif.make, metadata.exif.model)
+  console.log('Settings:', `f/${metadata.exif.fNumber}, ISO ${metadata.exif.isoSpeed}`)
+}
 ```
 
 ### Document Metadata
 
 ```typescript
 const metadata = await getMetadata('report.pdf', {
-  attributes: ['kMDItemTitle', 'kMDItemAuthors', 'kMDItemKeywords', 'kMDItemContentCreationDate']
+  attributes: ['kMDItemTitle', 'kMDItemAuthors', 'kMDItemKeywords', 'kMDItemContentCreationDate'],
+  structured: true
 })
 
-console.log('Title:', metadata.kMDItemTitle)
-console.log('Authors:', metadata.kMDItemAuthors?.join(', '))
-console.log('Keywords:', metadata.kMDItemKeywords?.join(', '))
-console.log('Created:', metadata.kMDItemContentCreationDate)
+// Through spotlight
+console.log('Title:', metadata.spotlight.kMDItemTitle)
+console.log('Authors:', metadata.spotlight.kMDItemAuthors?.join(', '))
+console.log('Keywords:', metadata.spotlight.kMDItemKeywords?.join(', '))
+console.log('Created:', metadata.spotlight.kMDItemContentCreationDate)
+
+// Or through XMP data
+if (metadata.xmp) {
+  console.log('Title:', metadata.xmp.title)
+  console.log('Creator:', metadata.xmp.creator)
+  console.log('Subject:', metadata.xmp.subject?.join(', '))
+  console.log('Created:', metadata.xmp.createDate)
+}
 ```
 
 ## See Also
@@ -214,6 +295,7 @@ console.log('Created:', metadata.kMDItemContentCreationDate)
 - [mdfind Documentation](./mdfind.md) - Search for files
 - [mdutil Documentation](./mdutil.md) - Manage Spotlight index
 - [Attributes Documentation](./attributes.md) - Available metadata attributes
+- [Metadata Documentation](./metadata.md) - Working with structured metadata
 
 ## References
 

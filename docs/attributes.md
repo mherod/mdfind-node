@@ -175,15 +175,31 @@ const complex = new QueryBuilder()
 ### In Metadata Extraction
 
 ```typescript
-import { mdls } from 'mdfind-node'
+import { getMetadata } from 'mdfind-node'
 
-// Get specific attributes
-const metadata = await mdls('file.jpg', {
-  attributes: ['kMDItemPixelHeight', 'kMDItemPixelWidth', 'kMDItemGPSLatitude']
+// Get specific attributes with structured output
+const metadata = await getMetadata('file.jpg', {
+  attributes: ['kMDItemPixelHeight', 'kMDItemPixelWidth', 'kMDItemGPSLatitude'],
+  structured: true
 })
 
-// Access raw values
-console.log(metadata.raw.kMDItemPixelHeight)
+// Access through spotlight property
+console.log(metadata.spotlight.kMDItemPixelHeight)
+
+// Or use specialized functions for common attributes
+import { getBasicMetadata, getExifData, getXMPData } from 'mdfind-node'
+
+// Get basic file metadata
+const basic = await getBasicMetadata('file.jpg')
+console.log(basic.name, basic.size)
+
+// Get EXIF data for images
+const exif = await getExifData('file.jpg')
+console.log(exif.make, exif.model)
+
+// Get XMP metadata
+const xmp = await getXMPData('file.jpg')
+console.log(xmp.title, xmp.creator)
 ```
 
 ## Attribute Types
@@ -200,48 +216,63 @@ console.log(metadata.raw.kMDItemPixelHeight)
 ### Type Mapping
 
 ```typescript
-// String attributes
-kMDItemDisplayName: string
-kMDItemContentType: string
-kMDItemTitle: string
+// Through spotlight property
+metadata.spotlight.kMDItemDisplayName: string
+metadata.spotlight.kMDItemContentType: string
+metadata.spotlight.kMDItemTitle: string
 
-// Number attributes
-kMDItemFSSize: number
-kMDItemPixelHeight: number
-kMDItemDurationSeconds: number
+// Through basic metadata
+metadata.basic.name: string
+metadata.basic.contentType: string
+metadata.basic.size: number
 
-// Date attributes
-kMDItemContentCreationDate: Date
-kMDItemContentModificationDate: Date
+// Through EXIF data
+metadata.exif?.make: string
+metadata.exif?.model: string
+metadata.exif?.focalLength: number
 
-// Boolean attributes
-kMDItemHasAlphaChannel: boolean
-kMDItemIsEncrypted: boolean
+// Through XMP data
+metadata.xmp?.title: string
+metadata.xmp?.creator: string
+metadata.xmp?.subject: string[]
 
-// Array attributes
-kMDItemKeywords: string[]
-kMDItemAuthors: string[]
-kMDItemLanguages: string[]
+// Raw spotlight attributes
+metadata.spotlight.kMDItemFSSize: number
+metadata.spotlight.kMDItemPixelHeight: number
+metadata.spotlight.kMDItemDurationSeconds: number
 
-// Object attributes
-kMDItemContentTypeTree: string[]
-kMDItemWhereFroms: string[]
+metadata.spotlight.kMDItemContentCreationDate: Date
+metadata.spotlight.kMDItemContentModificationDate: Date
+
+metadata.spotlight.kMDItemHasAlphaChannel: boolean
+metadata.spotlight.kMDItemIsEncrypted: boolean
+
+metadata.spotlight.kMDItemKeywords: string[]
+metadata.spotlight.kMDItemAuthors: string[]
+metadata.spotlight.kMDItemLanguages: string[]
+
+metadata.spotlight.kMDItemContentTypeTree: string[]
+metadata.spotlight.kMDItemWhereFroms: string[]
 ```
 
 ## Best Practices
 
-1. Verify attribute existence before use
-2. Handle missing values gracefully
-3. Use type-specific methods when available
-4. Consider performance with many attributes
-5. Cache attribute metadata for reuse
+1. Use structured metadata access for better type safety
+2. Use specialized functions for common metadata categories
+3. Access raw attributes through the `spotlight` property
+4. Handle optional EXIF and XMP data with optional chaining
+5. Verify attribute existence before use
+6. Handle missing values gracefully
+7. Use type-specific methods when available
+8. Consider performance with many attributes
+9. Cache metadata results when appropriate
 
 ## Examples
 
 ### Image Analysis
 
 ```typescript
-import { discover, QueryBuilder } from 'mdfind-node'
+import { discover, QueryBuilder, getMetadata, getExifData } from 'mdfind-node'
 
 async function analyzeImages() {
   // Get image-specific attributes
@@ -249,19 +280,24 @@ async function analyzeImages() {
     forContentType: 'public.image'
   })
 
-  // Build query
-  const query = new QueryBuilder().contentType('public.image')
+  // Get metadata with structured output
+  const metadata = await getMetadata('photo.jpg', {
+    attributes: attrs.map(a => a.name),
+    structured: true
+  })
 
-  // Add attribute conditions
-  for (const attr of attrs) {
-    if (attr.type === 'number') {
-      query.attributeExists(attr.name)
-    }
-  }
+  // Access through spotlight property
+  console.log(
+    'Dimensions:',
+    metadata.spotlight.kMDItemPixelWidth,
+    'x',
+    metadata.spotlight.kMDItemPixelHeight
+  )
 
-  // Find images with rich metadata
-  const images = await query.execute()
-  return images
+  // Or use EXIF data for camera info
+  const exif = await getExifData('photo.jpg')
+  console.log('Camera:', exif.make, exif.model)
+  console.log('Settings:', `f/${exif.fNumber}, ISO ${exif.isoSpeed}`)
 }
 ```
 

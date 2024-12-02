@@ -14,7 +14,13 @@ The extended metadata module provides type-safe access to common metadata catego
 ## Basic Usage
 
 ```typescript
-import { getMetadata } from 'mdfind-node'
+import {
+  getMetadata,
+  getBasicMetadata,
+  getExifData,
+  getXMPData,
+  getExtendedMetadata
+} from 'mdfind-node'
 
 // Get structured metadata
 const metadata = await getMetadata('photo.jpg', {
@@ -23,9 +29,17 @@ const metadata = await getMetadata('photo.jpg', {
 
 // Access different metadata categories
 console.log(metadata.basic.name) // Basic file info
-console.log(metadata.exif.focalLength) // EXIF data
-console.log(metadata.xmp.creator) // XMP data
-console.log(metadata.spotlight) // Raw Spotlight data
+console.log(metadata.exif?.focalLength) // EXIF data (optional)
+console.log(metadata.xmp?.creator) // XMP data (optional)
+console.log(metadata.spotlight.kMDItemFSName) // Raw Spotlight data
+
+// Or use specialized functions for each category
+const basic = await getBasicMetadata('photo.jpg')
+const exif = await getExifData('photo.jpg')
+const xmp = await getXMPData('photo.jpg')
+
+// Get all metadata at once
+const extended = await getExtendedMetadata('photo.jpg')
 ```
 
 ## Basic Metadata
@@ -33,6 +47,10 @@ console.log(metadata.spotlight) // Raw Spotlight data
 Core file and content metadata:
 
 ```typescript
+// Using getBasicMetadata
+const basic = await getBasicMetadata('document.pdf')
+
+// Or using structured getMetadata
 const { basic } = await getMetadata('document.pdf', {
   structured: true
 })
@@ -53,6 +71,10 @@ console.log(basic.lastOpened) // Date object
 Detailed image and media information:
 
 ```typescript
+// Using getExifData
+const exif = await getExifData('photo.jpg')
+
+// Or using structured getMetadata
 const { exif } = await getMetadata('photo.jpg', {
   structured: true
 })
@@ -79,6 +101,10 @@ console.log(exif.gpsAltitude) // 100
 Adobe's Extensible Metadata Platform data:
 
 ```typescript
+// Using getXMPData
+const xmp = await getXMPData('design.psd')
+
+// Or using structured getMetadata
 const { xmp } = await getMetadata('design.psd', {
   structured: true
 })
@@ -110,9 +136,9 @@ interface BasicMetadata {
   contentType?: string | null
   kind?: string | null
   size?: number
-  created?: Date | null
-  modified?: Date | null
-  lastOpened?: Date | null
+  created: Date | null
+  modified: Date | null
+  lastOpened: Date | null
 }
 ```
 
@@ -141,9 +167,9 @@ interface XMPData {
   description?: string | null
   creator?: string | null
   subject?: string[] | null
-  createDate?: Date | null
-  modifyDate?: Date | null
-  metadataDate?: Date | null
+  createDate: Date | null
+  modifyDate: Date | null
+  metadataDate: Date | null
   copyrightNotice?: string | null
   rights?: string | null
   webStatement?: string | null
@@ -156,13 +182,14 @@ Access any Spotlight attribute:
 
 ```typescript
 // Get raw metadata
-const metadata = await getMetadata('file.txt')
-console.log(metadata.kMDItemFSSize)
-console.log(metadata.kMDItemContentType)
+const metadata = await getMetadata('file.txt', { structured: true })
+console.log(metadata.spotlight.kMDItemFSSize)
+console.log(metadata.spotlight.kMDItemContentType)
 
 // Get specific attributes
-const attrs = await getMetadata('file.txt', {
-  attributes: ['kMDItemFSSize', 'kMDItemContentType']
+const metadata = await getMetadata('file.txt', {
+  attributes: ['kMDItemFSSize', 'kMDItemContentType'],
+  structured: true
 })
 ```
 
@@ -186,11 +213,12 @@ const protected = await new QueryBuilder().where('kMDItemCopyright != null').exe
 
 ## Best Practices
 
-1. Use structured metadata for better type safety
-2. Handle missing metadata gracefully (all fields are optional)
-3. Use raw metadata for attributes not covered by structured types
-4. Consider performance when requesting many attributes
-5. Cache metadata results when appropriate
+1. Use specialized functions (`getBasicMetadata`, `getExifData`, `getXMPData`) for better type safety
+2. Use `getExtendedMetadata` when you need multiple metadata categories
+3. Handle missing metadata gracefully (most fields are optional)
+4. Use raw metadata through `metadata.spotlight` for attributes not covered by structured types
+5. Consider performance when requesting many attributes
+6. Cache metadata results when appropriate
 
 ## See Also
 
