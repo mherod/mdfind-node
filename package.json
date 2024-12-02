@@ -42,7 +42,10 @@
     "examples:mdimport": "tsx examples/mdimport.ts",
     "examples:date-queries": "tsx examples/date-queries.ts",
     "examples:date-queries-live": "tsx examples/date-queries-live.ts",
-    "examples:remove-from-spotlight": "tsx examples/remove-from-spotlight.ts"
+    "examples:remove-from-spotlight": "tsx examples/remove-from-spotlight.ts",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "keywords": [
     "macos",
@@ -83,7 +86,8 @@
     "tsup": "^8.0.1",
     "tsx": "^4.6.1",
     "typescript": "^5.3.2",
-    "vitest": "^0.34.6"
+    "vitest": "^0.34.6",
+    "vitepress": "^1.0.0-rc.40"
   },
   "dependencies": {
     "zod": "^3.22.4"

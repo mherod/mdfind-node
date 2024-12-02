@@ -252,9 +252,15 @@ const jazzTracks = await new QueryBuilder()
   .recordedIn(2024)
   .byComposer('Miles Davis')
   .execute()
+
+const classicalAlbums = await new QueryBuilder()
+  .contentType('public.audio')
+  .byComposer('Mozart')
+  .inAlbum('Symphony No. 40')
+  .execute()
 ```
 
-### System Files
+### System Files and Configuration
 
 ```typescript
 const systemPrefs = await new QueryBuilder()
@@ -263,23 +269,33 @@ const systemPrefs = await new QueryBuilder()
   .isPlist()
   .inDirectory('/System/Library')
   .execute()
+
+const hiddenConfigs = await new QueryBuilder()
+  .isPlist()
+  .isInvisible()
+  .inDirectory('~/Library')
+  .execute()
 ```
 
 ## Best Practices
 
 1. Use specialized type methods (`isPDF()`, `isMarkdown()`) instead of raw content types when available
-2. Set appropriate buffer sizes for large result sets
+2. Set appropriate buffer sizes for large result sets using `maxBuffer()`
 3. Use `live` search with timeout for real-time updates
 4. Combine conditions logically with `useOperator()`
 5. Use `interpret()` for natural language queries
 6. Set directory scope with `inDirectory()` to limit search space
+7. Use type-specific methods for better type safety and code clarity
+8. Consider using batch operations for multiple related searches
+9. Handle errors appropriately in live search scenarios
+10. Clean up resources by terminating live searches when no longer needed
 
 ## See Also
 
-- [mdfind Documentation](./mdfind.md) - Core search functionality
-- [Batch Operations](./batch.md) - Running multiple searches
-- [Attributes Documentation](./attributes.md) - Available metadata attributes
-- [Content Types](./content-types.md) - Understanding UTI system
+- [Batch Operations](./batch.md) - Running multiple searches in parallel
+- [Content Types](./content-types.md) - Understanding UTI hierarchies
+- [Extended Metadata](./metadata.md) - Working with file metadata
+- [Advanced Topics](./advanced-topics.md) - Performance and optimization
 
 ## References
 

@@ -11,3 +11,11 @@ coverage/
 *.swo
 Thumbs.db
 test-file.txt
+
+# VitePress
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+.vitepress/cache
+.vitepress/dist
+.temp
+.cache
