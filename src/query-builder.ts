@@ -1,39 +1,50 @@
+/// <reference types="node" />
+
 import { spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { homedir } from 'node:os'
 import process from 'node:process'
-import { clearTimeout, setTimeout, type Timeout } from 'node:timers'
-import { z } from 'zod'
+import { clearTimeout, setTimeout } from 'node:timers'
+import {
+  type MdfindOptions,
+  type MdfindOptionsInput,
+  MdfindOptionsInputSchema
+} from './schemas/options.js'
 
-const SearchOptionsSchema = z.object({
-  live: z.boolean().default(false),
-  timeout: z.number().optional().describe('Timeout in milliseconds for live searches'),
-  operator: z.enum(['&&', '||']).default('&&'),
-  name: z.string().optional(),
-  onlyIn: z.string().optional(),
-  maxBuffer: z.number().default(1024 * 1024),
-  interpret: z.boolean().default(false),
-  literal: z.boolean().default(false)
-})
-
-type SearchOptions = z.infer<typeof SearchOptionsSchema>
+type Timeout = ReturnType<typeof setTimeout>
 
 /**
  * A fluent interface for building and executing Spotlight queries.
  */
 export class QueryBuilder {
   private query: string[] = []
-  private options: SearchOptions = {
+  private options: MdfindOptions = {
+    // Core options
+    maxBuffer: 1024 * 512,
+    literal: false,
+    interpret: false,
+
+    // Search options
     live: false,
     operator: '&&',
-    maxBuffer: 1024 * 1024
+    count: false,
+    reprint: false,
+    nullSeparator: false,
+
+    // Filter options (all optional, so not needed in default)
+    names: [],
+    attributes: []
   }
 
   /**
    * Create a new QueryBuilder instance
    */
-  constructor(options?: Partial<SearchOptions>) {
-    this.options = SearchOptionsSchema.parse({ ...this.options, ...options })
+  constructor(options?: Partial<MdfindOptionsInput>) {
+    const parsedOpts = MdfindOptionsInputSchema.parse(options ?? {})
+    this.options = {
+      ...this.options,
+      ...parsedOpts
+    }
   }
 
   /**

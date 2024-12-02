@@ -1,90 +1,97 @@
 import { z } from 'zod'
 
-// Core options shared between input and output
+/**
+ * Core options shared across all Spotlight-related operations
+ */
 const CoreOptionsSchema = z.object({
-  live: z.boolean().default(false),
-  count: z.boolean().default(false),
-  nullSeparator: z.boolean().default(false),
   maxBuffer: z.number().default(1024 * 512),
-  reprint: z.boolean().default(false),
   literal: z.boolean().default(false),
   interpret: z.boolean().default(false)
 })
 
-// Input type schema (what users provide)
-export const MdfindOptionsInputSchema = CoreOptionsSchema.extend({
-  // Legacy single-value options (for backward compatibility)
-  name: z.string().optional(),
-  onlyIn: z.string().optional(),
-  attr: z.string().optional(),
+/**
+ * Options specific to search operations
+ */
+export const SearchOptionsSchema = CoreOptionsSchema.extend({
+  live: z.boolean().default(false),
+  timeout: z.number().optional(),
+  operator: z.enum(['&&', '||']).default('&&'),
+  count: z.boolean().default(false),
+  reprint: z.boolean().default(false),
+  nullSeparator: z.boolean().default(false)
+})
 
-  // New array-based options
+/**
+ * Options for file path and attribute filtering
+ */
+export const FilterOptionsSchema = CoreOptionsSchema.extend({
+  name: z.string().optional(),
   names: z.array(z.string()).optional().default([]),
-  attributes: z.array(z.string()).optional().default([]),
-  onlyInDirectory: z.string().optional(),
-
-  // Other options
-  smartFolder: z.string().optional()
-})
-
-// Output type schema (after transformation)
-export const MdfindOptionsOutputSchema = CoreOptionsSchema.extend({
-  // Legacy single-value options (preserved for backward compatibility)
-  name: z.string().optional(),
   onlyIn: z.string().optional(),
-  attr: z.string().optional(),
-
-  // Array-based options
-  names: z.array(z.string()),
-  attributes: z.array(z.string()),
   onlyInDirectory: z.string().optional(),
-
-  // Other options
+  attr: z.string().optional(),
+  attributes: z.array(z.string()).optional().default([]),
   smartFolder: z.string().optional()
 })
 
-// Schema that handles the transformation
-export const MdfindOptionsSchema = MdfindOptionsInputSchema.transform(opts => {
+/**
+ * Complete mdfind options combining search and filter options
+ */
+export const MdfindOptionsSchema = SearchOptionsSchema.merge(FilterOptionsSchema)
+
+/**
+ * Input schema that accepts partial options
+ */
+export const MdfindOptionsInputSchema = MdfindOptionsSchema.partial()
+
+/**
+ * Transformed output schema that normalizes legacy and new options
+ */
+export const MdfindOptionsOutputSchema = MdfindOptionsSchema.transform(opts => {
   const transformed = {
     ...opts,
     names: [] as string[],
     attributes: [] as string[]
   }
 
-  // Convert legacy options to array format while preserving originals
-  const namesList = opts.names ?? []
-  const attributesList = opts.attributes ?? []
+  // Normalize path options
+  transformed.onlyInDirectory = opts.onlyIn ?? opts.onlyInDirectory
 
-  transformed.names = [...new Set([...namesList, ...(opts.name ? [opts.name] : [])])]
-  transformed.attributes = [...new Set([...attributesList, ...(opts.attr ? [opts.attr] : [])])]
-  transformed.onlyInDirectory = opts.onlyIn || transformed.onlyInDirectory
+  // Normalize name options
+  transformed.name = opts.name
+  transformed.names = opts.names ?? []
 
-  return MdfindOptionsOutputSchema.parse(transformed)
+  // Normalize attribute options
+  transformed.attr = opts.attr
+  transformed.attributes = opts.attributes ?? []
+
+  return transformed
 })
 
-// Export both input and output types
-export type MdfindOptionsInput = z.input<typeof MdfindOptionsInputSchema>
-export type MdfindOptions = z.output<typeof MdfindOptionsSchema>
-
-export const MdlsOptionsSchema = z.object({
+/**
+ * Options for mdls (metadata listing) operations
+ */
+export const MdlsOptionsSchema = CoreOptionsSchema.extend({
   attributes: z.array(z.string()).default([]),
   raw: z.boolean().default(false),
   nullMarker: z.string().default('(null)'),
   structured: z.boolean().default(false)
 })
 
-export type MdlsOptions = z.infer<typeof MdlsOptionsSchema>
-
-export const MdutilOptionsSchema = z.object({
+/**
+ * Options for mdutil (indexing utility) operations
+ */
+export const MdutilOptionsSchema = CoreOptionsSchema.extend({
   volume: z.string().optional(),
   verbose: z.boolean().default(false),
   excludeSystemVolumes: z.boolean().default(false),
   excludeUnknownState: z.boolean().default(false)
 })
 
-export type MdutilOptions = z.infer<typeof MdutilOptionsSchema>
-
-export const MdimportOptionsSchema = z.object({
+/**
+ * Options for mdimport (metadata import) operations
+ */
+export const MdimportOptionsSchema = CoreOptionsSchema.extend({
   recursive: z.boolean().default(false),
   remove: z.boolean().default(false),
   update: z.boolean().default(false),
@@ -93,4 +100,12 @@ export const MdimportOptionsSchema = z.object({
   attributeInfo: z.boolean().default(false)
 })
 
+// Type exports
+export type CoreOptions = z.infer<typeof CoreOptionsSchema>
+export type SearchOptions = z.infer<typeof SearchOptionsSchema>
+export type FilterOptions = z.infer<typeof FilterOptionsSchema>
+export type MdfindOptionsInput = z.input<typeof MdfindOptionsInputSchema>
+export type MdfindOptions = z.output<typeof MdfindOptionsOutputSchema>
+export type MdlsOptions = z.infer<typeof MdlsOptionsSchema>
+export type MdutilOptions = z.infer<typeof MdutilOptionsSchema>
 export type MdimportOptions = z.infer<typeof MdimportOptionsSchema>

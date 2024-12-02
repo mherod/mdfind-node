@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { homedir } from 'node:os'
-import { mdfind, MdfindError } from '../src/mdfind.js'
+import { Buffer } from 'node:buffer'
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { Buffer } from 'node:buffer'
+import { homedir } from 'node:os'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mdfind, MdfindError } from '../src/mdfind.js'
 
 // Mock child_process.spawn
 vi.mock('node:child_process', () => ({
@@ -65,11 +65,9 @@ describe('mdfind', () => {
       mockProcess.emit('close', 0)
 
       await promise
-      expect(spawn).toHaveBeenCalledWith(
-        'mdfind',
-        ['-name', '*.pdf', 'test query'],
-        expect.objectContaining({ env: expect.any(Object) })
-      )
+      expect(spawn).toHaveBeenCalledWith('mdfind', ['-name', '*.pdf', 'test query'], {
+        env: process.env
+      })
     })
 
     it('should add live option', async () => {
