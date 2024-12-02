@@ -6,7 +6,6 @@ dist/
 .pnpm-store/
 coverage/
 .idea/
-.vscode/
 *.sublime-*
 *.swp
 *.swo
