@@ -188,6 +188,17 @@ export default [
     }
   },
   {
-    ignores: ['dist/**', 'node_modules/**', '*.js']
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '*.js',
+      'docs/.vitepress/**',
+      '.vitepress/**',
+      '**/cache/**',
+      '**/dist/**',
+      '**/assets/**',
+      '**/temp/**',
+      '**/.temp/**'
+    ]
   }
 ]

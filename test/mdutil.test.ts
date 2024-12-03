@@ -79,7 +79,7 @@ describe('mdutil', () => {
 
         // Extract path from command, handling both quoted and unquoted formats
         const pathMatch = command.match(/(?:"([^"]+)"|([^ ]+))$/)
-        const path = pathMatch ? pathMatch[1] || pathMatch[2] : '/'
+        const path = pathMatch ? (pathMatch[1] ?? pathMatch[2]) : '/'
 
         // Handle indexing commands
         if (command.includes('mdutil -i on')) {
