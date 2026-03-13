@@ -257,6 +257,7 @@ for await (const filePath of stream2) {
 ```
 
 The `LiveSearchStream` returned by `mdfindStream` exposes:
+
 - `stop()` — terminate the search process
 - `process` — the underlying `ChildProcess` for advanced control
 
