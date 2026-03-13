@@ -26,6 +26,21 @@ import { mdfind } from 'mdfind-node'
 
 [View mdfind documentation](../mdfind)
 
+#### mdfindStream
+
+Async iterable wrapper for live Spotlight searches. Yields file paths one at a time for incremental consumption.
+
+```typescript
+import { mdfindStream } from 'mdfind-node'
+
+const stream = mdfindStream('kind:image', { onlyIn: '~/Pictures' })
+for await (const path of stream) {
+  // process each path as it arrives
+}
+```
+
+[View mdfind documentation](../mdfind)
+
 #### mdls
 
 Metadata listing utility.
@@ -79,6 +94,17 @@ interface MdfindOptions {
   // Filter options
   names?: string[]
   attributes?: string[]
+}
+```
+
+### LiveSearchStream
+
+Async iterable interface returned by `mdfindStream`.
+
+```typescript
+interface LiveSearchStream extends AsyncIterable<string> {
+  readonly process: ChildProcess
+  stop(): void
 }
 ```
 

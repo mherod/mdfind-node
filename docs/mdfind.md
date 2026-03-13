@@ -230,6 +230,36 @@ const search = mdfindLive(
 setTimeout(() => search.kill(), 5 * 60 * 1000)
 ```
 
+### Streaming Results (Async Iterable)
+
+For incremental consumption without buffering, use `mdfindStream`:
+
+```typescript
+import { mdfindStream } from 'mdfind-node'
+
+// Process results one at a time as they arrive
+const stream = mdfindStream('kind:image', { onlyIn: '~/Pictures' })
+
+for await (const filePath of stream) {
+  console.error('Found:', filePath)
+}
+
+// Collect a limited number of results
+const stream2 = mdfindStream('kind:pdf')
+const results: string[] = []
+
+for await (const filePath of stream2) {
+  results.push(filePath)
+  if (results.length >= 10) {
+    stream2.stop()
+  }
+}
+```
+
+The `LiveSearchStream` returned by `mdfindStream` exposes:
+- `stop()` — terminate the search process
+- `process` — the underlying `ChildProcess` for advanced control
+
 ## See Also
 
 - [Query Builder Documentation](./query-builder.md) - Type-safe query construction

@@ -13,6 +13,7 @@ A powerful Node.js wrapper for macOS's Spotlight search (`mdfind`), bringing sys
 - 🚀 **Full Spotlight Integration** - Access all macOS Spotlight search capabilities
 - 🔄 **Smart Query Builder** - Type-safe, fluent API for building complex searches
 - 🔄 **Live Search Support** - Real-time file monitoring and updates
+- 🌊 **Streaming Results** - Async iterable interface for incremental consumption
 - 📦 **Batch Operations** - Run multiple searches in parallel or sequence
 - 📝 **Rich Metadata** - Access EXIF, XMP, and system metadata
 - 💪 **Type-Safe** - Full TypeScript support with detailed types
@@ -148,6 +149,31 @@ setTimeout(() => {
   search1.kill()
   search2.kill()
 }, 10000)
+```
+
+### 🌊 Streaming Results (Async Iterable)
+
+```typescript
+import { mdfindStream } from 'mdfind-node'
+
+// Consume results one at a time with for-await-of
+const stream = mdfindStream('kind:image', { onlyIn: '~/Pictures' })
+
+for await (const filePath of stream) {
+  console.error('Found:', filePath)
+  // Process each file as it arrives — no buffering
+}
+
+// Stop early after collecting enough results
+const stream2 = mdfindStream('kind:pdf')
+const results: string[] = []
+
+for await (const filePath of stream2) {
+  results.push(filePath)
+  if (results.length >= 10) {
+    stream2.stop()
+  }
+}
 ```
 
 ### 📦 Batch Operations
