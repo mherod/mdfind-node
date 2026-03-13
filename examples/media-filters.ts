@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { QueryBuilder } from 'mdfind-node'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -6,7 +5,7 @@ import { join } from 'path'
 async function main() {
   try {
     // Example 1: Professional Photography Workflow
-    console.log('\n1. Finding professional photos:')
+    console.error('\n1. Finding professional photos:')
     const proPhotos = await new QueryBuilder()
       .contentType('public.image')
       .minImageDimensions(3000, 2000)
@@ -17,14 +16,14 @@ async function main() {
       .inDirectory(join(homedir(), 'Pictures'))
       .execute()
 
-    console.log(`Found ${proPhotos.length} professional photos`)
-    console.log(
+    console.error(`Found ${proPhotos.length} professional photos`)
+    console.error(
       'First 3:',
       proPhotos.slice(0, 3).map((p: string) => p.split('/').pop())
     )
 
     // Example 2: Portrait Photography
-    console.log('\n2. Finding portrait photos:')
+    console.error('\n2. Finding portrait photos:')
     const portraits = await new QueryBuilder()
       .contentType('public.image')
       .withFocalLength(50, 200)
@@ -34,14 +33,14 @@ async function main() {
       .inDirectory(join(homedir(), 'Pictures'))
       .execute()
 
-    console.log(`Found ${portraits.length} portrait photos`)
-    console.log(
+    console.error(`Found ${portraits.length} portrait photos`)
+    console.error(
       'First 3:',
       portraits.slice(0, 3).map((p: string) => p.split('/').pop())
     )
 
     // Example 3: High-Quality Audio Collection
-    console.log('\n3. Finding high-quality audio:')
+    console.error('\n3. Finding high-quality audio:')
     const hiResAudio = await new QueryBuilder()
       .contentType('public.audio')
       .minAudioQuality(96000, 1411000) // 96kHz/24-bit FLAC equivalent
@@ -50,14 +49,14 @@ async function main() {
       .inDirectory(join(homedir(), 'Music'))
       .execute()
 
-    console.log(`Found ${hiResAudio.length} high-resolution audio files`)
-    console.log(
+    console.error(`Found ${hiResAudio.length} high-resolution audio files`)
+    console.error(
       'First 3:',
       hiResAudio.slice(0, 3).map((p: string) => p.split('/').pop())
     )
 
     // Example 4: Classical Music Collection
-    console.log('\n4. Finding classical music:')
+    console.error('\n4. Finding classical music:')
     const classicalMusic = await new QueryBuilder()
       .contentType('public.audio')
       .inGenre('Classical')
@@ -66,8 +65,8 @@ async function main() {
       .inDirectory(join(homedir(), 'Music'))
       .execute()
 
-    console.log(`Found ${classicalMusic.length} classical music files`)
-    console.log(
+    console.error(`Found ${classicalMusic.length} classical music files`)
+    console.error(
       'First 3:',
       classicalMusic.slice(0, 3).map((p: string) => p.split('/').pop())
     )

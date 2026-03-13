@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { getIndexedEntries, getIndexingStatus, type MdutilError, setIndexing } from 'mdfind-node'
 import { existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -49,25 +48,25 @@ async function removeFromSpotlight(path: string): Promise<void> {
       return
     }
 
-    console.log(`\nProcessing: ${absolutePath}`)
+    console.error(`\nProcessing: ${absolutePath}`)
 
     // First check if the path exists and its current status
     const status = await getIndexingStatus(absolutePath)
     if (!status.enabled) {
-      console.log(`Indexing is already disabled for: ${absolutePath}`)
+      console.error(`Indexing is already disabled for: ${absolutePath}`)
     } else {
       // Disable indexing
-      console.log('Disabling Spotlight indexing...')
+      console.error('Disabling Spotlight indexing...')
       const result = await setIndexing(absolutePath, false)
       if (result.success) {
-        console.log(`Successfully disabled Spotlight indexing for: ${absolutePath}`)
+        console.error(`Successfully disabled Spotlight indexing for: ${absolutePath}`)
       } else {
         console.warn('Warning: Failed to verify indexing was disabled')
       }
     }
 
     // Check for any existing entries
-    console.log('Checking for existing Spotlight entries...')
+    console.error('Checking for existing Spotlight entries...')
     const remainingEntries = await getIndexedEntries(absolutePath)
     if (remainingEntries.length > 0) {
       console.warn(`Found ${remainingEntries.length} existing Spotlight entries:`)
@@ -78,7 +77,7 @@ async function removeFromSpotlight(path: string): Promise<void> {
         'You may want to wait for Spotlight to reindex or force a reindex to clear these entries'
       )
     } else {
-      console.log('No existing Spotlight entries found')
+      console.error('No existing Spotlight entries found')
     }
   } catch (error) {
     if (error instanceof Error && (error as MdutilError).requiresRoot) {
@@ -90,7 +89,7 @@ async function removeFromSpotlight(path: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log('Discovering Hidden directories in iCloud Drive...')
+  console.error('Discovering Hidden directories in iCloud Drive...')
   const hiddenDirs = findHiddenDirectories(ICLOUD_DRIVE_BASE)
 
   if (hiddenDirs.length === 0) {
@@ -98,11 +97,11 @@ async function main(): Promise<void> {
     return
   }
 
-  console.log(
+  console.error(
     `Found ${hiddenDirs.length} Hidden ${hiddenDirs.length === 1 ? 'directory' : 'directories'}:`
   )
   for (const dir of hiddenDirs) {
-    console.log(`  ${dir}`)
+    console.error(`  ${dir}`)
   }
 
   // Process each directory
