@@ -17,7 +17,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "husky",
+    "prepare": "[ -d .git ] && husky || true",
     "prepublishOnly": "pnpm clean && pnpm build",
     "test": "vitest run",
     "test:watch": "vitest watch",
